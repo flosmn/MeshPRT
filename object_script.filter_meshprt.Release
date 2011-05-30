@@ -1,0 +1,15 @@
+INPUT(
+./release\Window.o
+./release\PRTEngine.o
+./release\Mesh.o
+./release\Light.o
+./release\GfxStats.o
+./release\filter_meshprt.o
+./release\DirectXMesh.o
+./release\DirectInput.o
+./release\DiffuseDemo.o
+./release\d3dUtil.o
+./release\d3dApp.o
+./release\Camera.o
+./release\moc_filter_meshprt.o
+);
