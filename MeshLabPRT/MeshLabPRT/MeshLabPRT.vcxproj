@@ -70,6 +70,7 @@
     <ClInclude Include="..\..\MeshDatastructures.h" />
     <ClInclude Include="..\..\PRTEngine.h" />
     <ClInclude Include="..\..\Window.h" />
+    <ClInclude Include="localConfig.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\Camera.cpp" />

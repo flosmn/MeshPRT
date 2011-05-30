@@ -43,7 +43,7 @@ WCHAR* GetRootDir() {
 #ifdef MESHLAB
   return L"../meshlabplugins/filter_meshprt/";
 #else
-  return L"../";
+  return L"../../";
 #endif
 }
 

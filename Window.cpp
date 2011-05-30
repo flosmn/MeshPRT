@@ -23,14 +23,14 @@ void Window::OpenWindow() {
  CreateThread(NULL, 0, NewWindow, NULL, 0, NULL);
 }
 
-/*int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE prevInstance,
+int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE prevInstance,
                     PSTR cmdLine, int showCmd)
 {
 	Window* window = new Window();
   SetGlobalInstance(hInstance);
   InitMainWindow();
   StartDirectX();
-}*/
+}
 
 DWORD WINAPI NewWindow(LPVOID lpParameter) {
   

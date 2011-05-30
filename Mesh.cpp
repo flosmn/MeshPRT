@@ -170,8 +170,9 @@ HRESULT Mesh::LoadMesh()
 {
   ReleaseCOM( mMesh )
   
-  D3DXLoadMeshFromX( L"../../models/bigship1.x", D3DXMESH_MANAGED | D3DXMESH_32BIT, mDevice, NULL, NULL, 
-                    NULL, NULL, &mMesh );
+  WCHAR* model = L"models/bigship1.x";
+  D3DXLoadMeshFromX(AppendToRootDir(model) , D3DXMESH_MANAGED | D3DXMESH_32BIT,
+                    mDevice, NULL, NULL, NULL, NULL, &mMesh );
   
   AdjustMeshDecl( mDevice, &mMesh );
   AttribSortMesh( &mMesh );

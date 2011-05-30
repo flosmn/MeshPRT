@@ -1,16 +1,10 @@
-﻿Build started 26.05.2011 15:01:20.
+﻿Build started 30.05.2011 09:49:33.
      1>Project "C:\Users\flosmn\Dropbox\Studienarbeit\meshlab-sources\meshlab\src\meshlabplugins\filter_meshprt\MeshLabPRT\MeshLabPRT\MeshLabPRT.vcxproj" on node 2 (build target(s)).
      1>InitializeBuildStatus:
          Creating "Debug\MeshLabPRT.unsuccessfulbuild" because "AlwaysCreate" was specified.
        ClCompile:
-         C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\CL.exe /c /ZI /nologo /W3 /WX- /Od /Oy- /D _MBCS /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Debug\\" /Fd"Debug\vc100.pdb" /Gd /TP /analyze- /errorReport:prompt ..\..\DiffuseDemo.cpp
-         DiffuseDemo.cpp
-     1>c:\users\flosmn\dropbox\studienarbeit\meshlab-sources\meshlab\src\meshlabplugins\filter_meshprt\diffusedemo.cpp(64): warning C4800: 'int' : forcing value to bool 'true' or 'false' (performance warning)
-     1>c:\users\flosmn\dropbox\studienarbeit\meshlab-sources\meshlab\src\meshlabplugins\filter_meshprt\diffusedemo.cpp(216): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
-                 c:\program files (x86)\microsoft visual studio 10.0\vc\include\stdio.h(371) : see declaration of 'sprintf'
-     1>c:\users\flosmn\dropbox\studienarbeit\meshlab-sources\meshlab\src\meshlabplugins\filter_meshprt\diffusedemo.cpp(219): warning C4996: 'sprintf': This function or variable may be unsafe. Consider using sprintf_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
-                 c:\program files (x86)\microsoft visual studio 10.0\vc\include\stdio.h(371) : see declaration of 'sprintf'
-     1>c:\users\flosmn\dropbox\studienarbeit\meshlab-sources\meshlab\src\meshlabplugins\filter_meshprt\diffusedemo.cpp(241): warning C4700: uninitialized local variable 'w_error' used
+         C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\CL.exe /c /ZI /nologo /W3 /WX- /Od /Oy- /D _MBCS /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Debug\\" /Fd"Debug\vc100.pdb" /Gd /TP /analyze- /errorReport:prompt ..\..\Mesh.cpp
+         Mesh.cpp
        Link:
          C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"C:\Users\flosmn\Dropbox\Studienarbeit\meshlab-sources\meshlab\src\meshlabplugins\filter_meshprt\MeshLabPRT\Debug\MeshLabPRT.exe" /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /ManifestFile:"Debug\MeshLabPRT.exe.intermediate.manifest" /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /DEBUG /PDB:"C:\Users\flosmn\Dropbox\Studienarbeit\meshlab-sources\meshlab\src\meshlabplugins\filter_meshprt\MeshLabPRT\Debug\MeshLabPRT.pdb" /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"C:\Users\flosmn\Dropbox\Studienarbeit\meshlab-sources\meshlab\src\meshlabplugins\filter_meshprt\MeshLabPRT\Debug\MeshLabPRT.lib" /MACHINE:X86 Debug\Camera.obj
          Debug\d3dApp.obj
@@ -33,4 +27,4 @@
 
 Build succeeded.
 
-Time Elapsed 00:00:02.16
+Time Elapsed 00:00:02.24

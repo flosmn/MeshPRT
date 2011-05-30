@@ -18,6 +18,8 @@
 #include <vector>
 #include <stdio.h>
 
+#include "localConfig.h"
+
 #pragma comment(lib, "dxerr.lib")
 #pragma comment(lib, "d3d9.lib")
 #pragma comment(lib, "d3dx9.lib")
@@ -31,7 +33,6 @@ extern IDirect3DDevice9* gd3dDevice;
 WCHAR* Concat(const WCHAR *a, const WCHAR *b);
 WCHAR* AppendToRootDir(const WCHAR *b);
 
-#define MESHLAB
 WCHAR* GetRootDir();
 
 //===============================================================
