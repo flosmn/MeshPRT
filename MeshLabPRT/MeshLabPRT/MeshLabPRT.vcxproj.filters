@@ -45,7 +45,7 @@
     <ClInclude Include="..\..\Window.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="localConfig.h">
+    <ClInclude Include="..\..\localConfig.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -80,5 +80,10 @@
     <ClCompile Include="..\..\Window.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\shader\diffuse.fx">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

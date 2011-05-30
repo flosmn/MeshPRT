@@ -7,6 +7,16 @@
 #define NUM_CHANNELS	3
 float4 aPRTConstants[NUM_CLUSTERS*(1+NUM_CHANNELS*(NUM_PCA/4))];
 
+texture AlbedoTex;
+
+sampler Sampler = sampler_state
+{ 
+    Texture = AlbedoTex;
+    MipFilter = LINEAR; 
+    MinFilter = LINEAR;
+    MagFilter = LINEAR;
+};
+
 uniform extern float4x4 gWorld;
 uniform extern float4x4 gView;
 uniform extern float4x4 gProjection;
@@ -49,7 +59,9 @@ struct OutputPerVertexLightingVS
     float4 color : COLOR0;
 };
 
-OutputPerVertexLightingVS PerVertexLightingVS(float3 posL : POSITION0, float3 normalL : NORMAL0)
+OutputPerVertexLightingVS PerVertexLightingVS(	float3 posL : POSITION0, 
+												float3 normalL : NORMAL0, 
+												float2 texL : TEXCOORD0)
 {
 	OutputPerVertexLightingVS outVS = (OutputPerVertexLightingVS)0;
 	
@@ -86,11 +98,15 @@ float4 PerVertexLightingPS(float4 c : COLOR0) : COLOR
 struct OutputPerPixelLightingVS
 {
       float4 posH    : POSITION0;
-      float3 normalW : TEXCOORD0;
-      float3 posW    : TEXCOORD1;
+	  float2 tex	 : TEXCOORD0;
+      float3 normalW : TEXCOORD1;
+      float3 posW    : TEXCOORD2;
 };
 
-OutputPerPixelLightingVS PerPixelLightingVS(float3 posL : POSITION0, float3 normalL : NORMAL0)
+OutputPerPixelLightingVS PerPixelLightingVS(float3 posL : POSITION0, 
+											float3 normalL : NORMAL0, 
+											float2 in_tex : TEXCOORD0,
+											uniform bool in_useTex )
 {
  	OutputPerPixelLightingVS outVS = (OutputPerPixelLightingVS)0;
 	
@@ -102,11 +118,19 @@ OutputPerPixelLightingVS PerPixelLightingVS(float3 posL : POSITION0, float3 norm
 	outVS.posH = mul(outVS.posH, gView);
 	outVS.posH = mul(outVS.posH, gProjection);
 	
+	if( in_useTex ) 
+		outVS.tex = in_tex;
+	else 
+		outVS.tex = 0;
+	
     return outVS;
 }
 
-float4 PerPixelLightingPS(float3 normalW : TEXCOORD0,
-						  float3 posW : TEXCOORD1) : COLOR
+float4 PerPixelLightingPS(	float4 posH     : POSITION0,
+							float2 tex		: TEXCOORD0,
+							float3 normalW  : TEXCOORD1,
+							float3 posW     : TEXCOORD2,
+							uniform bool useTex ) : COLOR
 {
 	normalW = normalize(normalW);
 
@@ -119,7 +143,12 @@ float4 PerPixelLightingPS(float3 normalW : TEXCOORD0,
     float3 spec = t*(gSpecularMtrl*gLightColor).rgb;
     float3 diffuse = s*(gDiffuseMtrl*gLightColor).rgb;
    	
-    return float4(diffuse + spec, gDiffuseMtrl.a);
+    float4 Light = float4(diffuse + spec, gDiffuseMtrl.a);
+	float4 Albedo = float4(1.0f, 1.0f, 1.0f, 1.0f);
+
+	if( useTex ) Albedo = tex2D(Sampler, tex);
+
+	return Light * Albedo;
 }
 
 // lighting with PRT -------------------------------------------------------------------------------------------
@@ -164,13 +193,23 @@ technique PerVertexLighting
 	}
 }
 
-technique PerPixelLighting
+technique PerPixelLightingWithTexture
 {
     pass P0
     {
         // Specify the vertex and pixel shader associated with this pass.
-        vertexShader = compile vs_2_0 PerPixelLightingVS();
-        pixelShader  = compile ps_2_0 PerPixelLightingPS();
+        vertexShader = compile vs_2_0 PerPixelLightingVS(true);
+        pixelShader  = compile ps_2_0 PerPixelLightingPS(true);
+	}
+}
+
+technique PerPixelLightingWithoutTexture
+{
+    pass P0
+    {
+        // Specify the vertex and pixel shader associated with this pass.
+        vertexShader = compile vs_2_0 PerPixelLightingVS(false);
+        pixelShader  = compile ps_2_0 PerPixelLightingPS(false);
 	}
 }
 

@@ -7,13 +7,13 @@ public:
   Light();
   virtual ~Light();
 
-  D3DXVECTOR3 getLightDirection() { return mLightDirection; }
-  D3DXVECTOR3 getLightPosition() { return mLightPosition; }
-  D3DXCOLOR getLightColor() { return mLightColor; }
-  void calculateSHCoefficients();
-  float* getSHCoeffsRed(){ return mSHCoeffsRed; }
-  float* getSHCoeffsGreen(){ return mSHCoeffsGreen; }
-  float* getSHCoeffsBlue() { return mSHCoeffsBlue; }
+  D3DXVECTOR3 GetLightDirection() { return mLightDirection; }
+  D3DXVECTOR3 GetLightPosition() { return mLightPosition; }
+  D3DXCOLOR GetLightColor() { return mLightColor; }
+  HRESULT CalculateSHCoefficients();
+  float* GetSHCoeffsRed(){ return mSHCoeffsRed; }
+  float* GetSHCoeffsGreen(){ return mSHCoeffsGreen; }
+  float* GetSHCoeffsBlue() { return mSHCoeffsBlue; }
 
 protected:
   D3DXVECTOR3 mLightDirection;

@@ -66,11 +66,11 @@
     <ClInclude Include="..\..\DirectInput.h" />
     <ClInclude Include="..\..\GfxStats.h" />
     <ClInclude Include="..\..\Light.h" />
+    <ClInclude Include="..\..\localConfig.h" />
     <ClInclude Include="..\..\Mesh.h" />
     <ClInclude Include="..\..\MeshDatastructures.h" />
     <ClInclude Include="..\..\PRTEngine.h" />
     <ClInclude Include="..\..\Window.h" />
-    <ClInclude Include="localConfig.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\Camera.cpp" />
@@ -83,6 +83,9 @@
     <ClCompile Include="..\..\Mesh.cpp" />
     <ClCompile Include="..\..\PRTEngine.cpp" />
     <ClCompile Include="..\..\Window.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\shader\diffuse.fx" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

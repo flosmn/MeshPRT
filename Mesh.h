@@ -9,8 +9,7 @@ public:
 
   ID3DXMesh* getMesh();
  
-  HRESULT LoadMesh();
-  HRESULT CreateMeshFrom(std::vector<Vertex> vertices, std::vector<Face> faces);
+  HRESULT LoadMesh(WCHAR* directory, WCHAR* name, WCHAR* extension);
   
   void drawMesh();
   void loadFX(ID3DXEffect *effect);
@@ -20,16 +19,36 @@ public:
       
   void setPRTCompBuffer(ID3DXPRTCompBuffer* compBuffer) { mPRTCompBuffer = compBuffer; }
   void setPRTConstants(float* prtConstants) { mPRTConstants = prtConstants; }
-  void setPRTConstantsInEffect();
+  HRESULT setPRTConstantsInEffect();
 
   D3DXCOLOR getDiffuseMaterial(int i);
 
+  void SetDirectory(WCHAR* dir) { directory = dir; } 
+  WCHAR* GetDirectory() { return directory; }
+
+  void SetName(WCHAR* _name) { name = _name; } 
+  WCHAR* GetName() { return name; }
+
+  bool HasTextures() { return hasTextures; }
+
 protected:
-  HRESULT AdjustMeshDecl( IDirect3DDevice9* pd3dDevice, ID3DXMesh** pMesh );
+  HRESULT AdjustMeshDecl();
+  HRESULT AttribSortMesh();
+  HRESULT LoadTextures();
+
+  bool DoesMeshHaveUsage( BYTE Usage );
+  void CleanUpMesh();
 
   IDirect3DDevice9 *mDevice;
   ID3DXMesh* mMesh;  
   ID3DXEffect* mEffect;
+
+  DWORD mNumMaterials;
+  ID3DXBuffer* mMaterialBuffer;
+  D3DXMATERIAL* mMaterials;
+
+  std::vector<IDirect3DTexture9*> mTextures;
+  bool hasTextures;
 
   float mRotationX;
   float mRotationY;
@@ -48,4 +67,7 @@ protected:
     
   ID3DXPRTCompBuffer* mPRTCompBuffer;
   float* mPRTConstants;
+
+  WCHAR* directory;
+  WCHAR* name;
 };

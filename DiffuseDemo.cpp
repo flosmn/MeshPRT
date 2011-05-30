@@ -31,7 +31,8 @@ private:
 
   ID3DXEffect* mFX;
   D3DXHANDLE   mhPerVertexLightingTechnique;
-  D3DXHANDLE   mhPerPixelLightingTechnique;
+  D3DXHANDLE   mhPerPixelLightingTechniqueWithTexture;
+  D3DXHANDLE   mhPerPixelLightingTechniqueWithoutTexture;
   D3DXHANDLE   mhPRTLightingTechnique;
   D3DXHANDLE   mhView;
   D3DXHANDLE   mhProjection;
@@ -55,16 +56,19 @@ bool StartDirectX() {
   _CrtSetDbgFlag( _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF );
 #endif
 
-  DiffuseDemo app("Diffuse Demo", D3DDEVTYPE_HAL, D3DCREATE_HARDWARE_VERTEXPROCESSING);
+  DiffuseDemo app( "Diffuse Demo", D3DDEVTYPE_HAL,  
+                   D3DCREATE_HARDWARE_VERTEXPROCESSING);
   gd3dApp = &app;
 
-  DirectInput di(DISCL_NONEXCLUSIVE|DISCL_FOREGROUND, DISCL_NONEXCLUSIVE|DISCL_FOREGROUND);
+  DirectInput di( DISCL_NONEXCLUSIVE|DISCL_FOREGROUND, 
+                  DISCL_NONEXCLUSIVE|DISCL_FOREGROUND);
   gDInput = &di;
 
   return gd3dApp->run();
 }
 
-DiffuseDemo::DiffuseDemo(std::string winCaption, D3DDEVTYPE devType, DWORD requestedVP)
+DiffuseDemo::DiffuseDemo( std::string winCaption, D3DDEVTYPE devType, 
+                          DWORD requestedVP )
   : D3DApp(winCaption, devType, requestedVP)
 {
   if(!checkDeviceCaps())
@@ -76,12 +80,15 @@ DiffuseDemo::DiffuseDemo(std::string winCaption, D3DDEVTYPE devType, DWORD reque
   phongShading = false;
 
   mMesh = new Mesh(gd3dDevice);
-  mMesh->LoadMesh();
+  mMesh->LoadMesh(L"models/", L"wall_with_pillars", L".x");
   
   mPRTEngine = new PRTEngine(gd3dDevice);
   
-  mLight = new Light(D3DXVECTOR3(0.0f, 5.0f, -5.0f), D3DXVECTOR3(0.0f, -1.0f, 1.0f), D3DXCOLOR(1.0f, 1.0f, 1.0f, 1.0f));
-  mLight->calculateSHCoefficients();
+  mLight = new Light( D3DXVECTOR3(0.0f, 5.0f, -5.0f), 
+                      D3DXVECTOR3(-1.0f, -1.0f, 1.0f), 
+                      D3DXCOLOR(1.0f, 1.0f, 1.0f, 1.0f) );
+  
+  mLight->CalculateSHCoefficients();
 
   mPRTEngine->getCoefficientsForMesh(mMesh, mLight);
 
@@ -166,7 +173,14 @@ void DiffuseDemo::drawScene()
 
   // Setup the rendering FX
   if(phongShading){
-    mFX->SetTechnique(mhPerPixelLightingTechnique);
+    if( mMesh->HasTextures() )
+    {
+      mFX->SetTechnique(mhPerPixelLightingTechniqueWithTexture);
+    }
+    else
+    {
+      mFX->SetTechnique(mhPerPixelLightingTechniqueWithoutTexture);
+    }
   }
   else {
     mFX->SetTechnique(mhPRTLightingTechnique);
@@ -176,9 +190,9 @@ void DiffuseDemo::drawScene()
   mFX->SetValue(mhEyePosW, &(mCamera->pos()), sizeof(D3DXVECTOR3));
   mFX->SetMatrix(mhProjection, &mProj);
 
-  mFX->SetValue(mhLightVecW, &mLight->getLightDirection(), sizeof(D3DXVECTOR3));
-  mFX->SetValue(mhLightPositionW, &mLight->getLightPosition(), sizeof(D3DXCOLOR));
-  mFX->SetValue(mhLightColor, &mLight->getLightColor(), sizeof(D3DXCOLOR));
+  mFX->SetValue(mhLightVecW, &mLight->GetLightDirection(), sizeof(D3DXVECTOR3));
+  mFX->SetValue(mhLightPositionW, &mLight->GetLightPosition(), sizeof(D3DXCOLOR));
+  mFX->SetValue(mhLightColor, &mLight->GetLightColor(), sizeof(D3DXCOLOR));
 
   // Begin passes.
   UINT numPasses = 0;
@@ -227,26 +241,28 @@ void DiffuseDemo::buildFX(Mesh* mesh)
 
   // Create the FX from a .fx file.
   ID3DXBuffer* errors = 0;
-  LPCWSTR effectName = L"../../shader/diffuse.fx";
+  LPCWSTR effectName = L"shader/diffuse.fx";
 
   PD(D3D_OK, L"try create effect from file: ");
   PD(D3D_OK, effectName);
-  HRESULT hr = D3DXCreateEffectFromFile(gd3dDevice, effectName,
+  HRESULT hr = D3DXCreateEffectFromFile(gd3dDevice, AppendToRootDir(effectName),
                               aDefines, 0, D3DXSHADER_DEBUG, 0, &mFX, &errors);
   PD( hr, L"create effect from file" );
 
   if( errors ) {
-    char* c_error = (char*)errors->GetBufferPointer();
-    WCHAR* w_error;
-    CharArrayToWCharArray(c_error, w_error);
-    OutputDebugString(w_error);
-    delete [] w_error;
-    delete [] c_error;
+    char* error_c = (char*)errors->GetBufferPointer();
+    DWORD length = MultiByteToWideChar( CP_ACP, 0, error_c, -1, NULL, 0 );
+    WCHAR* error_w = new WCHAR[length];
+    MultiByteToWideChar( CP_ACP, 0, error_c, -1, error_w, length );
+    OutputDebugString(error_w);
+    delete [] error_c;
+    delete [] error_w;
   }
 
   // Obtain handles.
   mhPerVertexLightingTechnique = mFX->GetTechniqueByName("PerVertexLighting");
-  mhPerPixelLightingTechnique = mFX->GetTechniqueByName("PerPixelLighting");
+  mhPerPixelLightingTechniqueWithTexture = mFX->GetTechniqueByName("PerPixelLightingWithTexture");
+  mhPerPixelLightingTechniqueWithoutTexture = mFX->GetTechniqueByName("PerPixelLightingWithoutTexture");
   mhPRTLightingTechnique  = mFX->GetTechniqueByName("PRTLighting");
   mhView                  = mFX->GetParameterByName(0, "gView");
   mhProjection            = mFX->GetParameterByName(0, "gProjection");

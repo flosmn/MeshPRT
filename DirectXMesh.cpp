@@ -154,13 +154,6 @@ HRESULT DirectXMesh::SaveMeshToFile(const WCHAR* filename) {
     materials[i].pTextureFilename = NULL;
   }
 
-  /*
-   *  if the file already exists delete it.
-   *  otherwise the function D3DXSaveMeshToX
-   *  will crash the application
-  */
-  //DeleteFile(filename);
-
   PD(D3DXSaveMeshToX(filename, pMesh, pAdjacency, materials, NULL,
                      dwNumMeshes, dwFormat),
      L"save mesh to file");

@@ -9,6 +9,11 @@
 *.obj
 *.tlog
 *.ipch
+*.log
+*.idb
+*.pdb
+*.ilk
+*.suo
 
 # Packages #
 ############
@@ -37,3 +42,4 @@ Icon?
 Thumbs.db
 
 MeshLabPRT/MeshLabPRT.sdf
+MeshLabPRT/MeshLabPRT.opensdf

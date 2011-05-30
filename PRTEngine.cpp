@@ -39,15 +39,23 @@ void PRTEngine::getCoefficientsForMesh(Mesh* mesh, Light* light) {
   PD(D3DXCreatePRTBuffer( dwNumSamples, mOrder * mOrder,  mNumChannels, &pBufferB ), L"create prt buffer");
 
   PD(mPRTEngine->ComputeDirectLightingSH( mOrder, pDataTotal ), L"compute direct lighting SH");
-
+  
+  /*
   pBufferA->AddBuffer( pDataTotal );
   PD(mPRTEngine->ComputeBounce( pBufferA, pBufferB, pDataTotal ), L"first boundce");
   PD(mPRTEngine->ComputeBounce( pBufferB, pBufferA, pDataTotal ), L"second bounce");
-
-  PD(D3DXCreatePRTCompBuffer( D3DXSHCQUAL_SLOWHIGHQUALITY, 1, dwNumPCA, NULL, NULL, pDataTotal, &compPRTBuffer ), L"create compressed prt buffer");
-  PD(D3DXSavePRTCompBufferToFile( L"compbuffer.buffer", compPRTBuffer ), L"save compressed prt buffer to file");
-  PD(D3DXSavePRTBufferToFile( L"buffer.buffer", pDataTotal ), L"save prt buffer to file");
-
+  */
+  
+  WCHAR* bufferfile = Concat(mesh->GetName(), L".compbuffer");
+  WCHAR* bufferpath = Concat(mesh->GetDirectory(), bufferfile);
+  
+  PD(D3DXCreatePRTCompBuffer( D3DXSHCQUAL_SLOWHIGHQUALITY, 1, dwNumPCA, NULL, 
+                              NULL, pDataTotal, &compPRTBuffer ),
+     L"create compressed prt buffer");
+  
+  PD(D3DXSavePRTCompBufferToFile( AppendToRootDir(bufferpath), compPRTBuffer ),
+     L"save compressed prt buffer to file");
+  
   mesh->setPRTCompBuffer(compPRTBuffer);
 
   PD( compPRTBuffer->NormalizeData() , L"normalize data of comp prt buffer");
@@ -92,18 +100,18 @@ void PRTEngine::getCoefficientsForMesh(Mesh* mesh, Light* light) {
   DWORD dwBasisStride = dwNumCoeffs * mNumChannels * ( dwNumPCA + 1 );
   
   for( DWORD iCluster = 0; iCluster < dwNumClusters; iCluster++ )  {
-    PRTConstants[iCluster * dwClusterStride + 0] = D3DXSHDot( mOrder, &PRTClusterBases[iCluster * dwBasisStride + 0 * dwNumCoeffs], light->getSHCoeffsRed() );
-    PRTConstants[iCluster * dwClusterStride + 1] = D3DXSHDot( mOrder, &PRTClusterBases[iCluster * dwBasisStride + 1 * dwNumCoeffs], light->getSHCoeffsGreen() );
-    PRTConstants[iCluster * dwClusterStride + 2] = D3DXSHDot( mOrder, &PRTClusterBases[iCluster * dwBasisStride + 2 * dwNumCoeffs], light->getSHCoeffsBlue() );
+    PRTConstants[iCluster * dwClusterStride + 0] = D3DXSHDot( mOrder, &PRTClusterBases[iCluster * dwBasisStride + 0 * dwNumCoeffs], light->GetSHCoeffsRed() );
+    PRTConstants[iCluster * dwClusterStride + 1] = D3DXSHDot( mOrder, &PRTClusterBases[iCluster * dwBasisStride + 1 * dwNumCoeffs], light->GetSHCoeffsGreen() );
+    PRTConstants[iCluster * dwClusterStride + 2] = D3DXSHDot( mOrder, &PRTClusterBases[iCluster * dwBasisStride + 2 * dwNumCoeffs], light->GetSHCoeffsBlue() );
     PRTConstants[iCluster * dwClusterStride + 3] = 0.0f;
 
     float* pPCAStart = &PRTConstants[iCluster * dwClusterStride + 4];
     for( DWORD iPCA = 0; iPCA < dwNumPCA; iPCA++ ) {
       int nOffset = iCluster * dwBasisStride + ( iPCA + 1 ) * dwNumCoeffs * mNumChannels;
 
-      pPCAStart[0 * dwNumPCA + iPCA] = D3DXSHDot( mOrder, &PRTClusterBases[nOffset + 0 * dwNumCoeffs], light->getSHCoeffsRed() );
-      pPCAStart[1 * dwNumPCA + iPCA] = D3DXSHDot( mOrder, &PRTClusterBases[nOffset + 1 * dwNumCoeffs], light->getSHCoeffsGreen() );
-      pPCAStart[2 * dwNumPCA + iPCA] = D3DXSHDot( mOrder, &PRTClusterBases[nOffset + 2 * dwNumCoeffs], light->getSHCoeffsBlue() );
+      pPCAStart[0 * dwNumPCA + iPCA] = D3DXSHDot( mOrder, &PRTClusterBases[nOffset + 0 * dwNumCoeffs], light->GetSHCoeffsRed() );
+      pPCAStart[1 * dwNumPCA + iPCA] = D3DXSHDot( mOrder, &PRTClusterBases[nOffset + 1 * dwNumCoeffs], light->GetSHCoeffsGreen() );
+      pPCAStart[2 * dwNumPCA + iPCA] = D3DXSHDot( mOrder, &PRTClusterBases[nOffset + 2 * dwNumCoeffs], light->GetSHCoeffsBlue() );
     }
   }
 

@@ -1,11 +1,14 @@
 #include "Mesh.h"
 
-bool DoesMeshHaveUsage( ID3DXMesh* pMesh, BYTE Usage );
-
-Mesh::Mesh() {
+Mesh::Mesh()
+{
 }
 
-Mesh::Mesh(IDirect3DDevice9 *device) {
+Mesh::Mesh(IDirect3DDevice9 *device) 
+{
+  mMaterialBuffer = 0;
+  mNumMaterials = 0;
+  hasTextures = false;
   mMesh = 0;  
   mRotationX = 0;
   mRotationY = 0;
@@ -14,19 +17,26 @@ Mesh::Mesh(IDirect3DDevice9 *device) {
   mDevice = device;
   D3DXMatrixIdentity(&mWorld);
 
-  mDiffuseMtrl[0].r = 1.0f; mDiffuseMtrl[0].g = 0.0f; mDiffuseMtrl[0].b = 0.0f; mDiffuseMtrl[0].a = 1.0f;
-  mDiffuseMtrl[1].r = 1.0f; mDiffuseMtrl[1].g = 1.0f; mDiffuseMtrl[1].b = 1.0f; mDiffuseMtrl[1].a = 1.0f;
-  mDiffuseMtrl[2].r = 0.0f; mDiffuseMtrl[2].g = 0.0f; mDiffuseMtrl[2].b = 1.0f; mDiffuseMtrl[2].a = 1.0f;
+  mDiffuseMtrl[0].r = 1.0f; mDiffuseMtrl[0].g = 1.0f; mDiffuseMtrl[0].b = 1.0f;
+  mDiffuseMtrl[0].a = 1.0f;
+  
+  mDiffuseMtrl[1].r = 1.0f; mDiffuseMtrl[1].g = 1.0f; mDiffuseMtrl[1].b = 1.0f; 
+  mDiffuseMtrl[1].a = 1.0f;
+  
+  mDiffuseMtrl[2].r = 1.0f; mDiffuseMtrl[2].g = 1.0f; mDiffuseMtrl[2].b = 1.0f; 
+  mDiffuseMtrl[2].a = 1.0f;
 
   mSpecularMtrl = D3DXCOLOR(1.0f, 1.0f, 1.0f, 1.0f);
   mSpecularPower = 8.0f;
 }
 
-D3DXCOLOR Mesh::getDiffuseMaterial(int i) {
-  return mDiffuseMtrl[i%3];
+D3DXCOLOR Mesh::getDiffuseMaterial(int i) 
+{
+  return mDiffuseMtrl[0];
 }
 
-void Mesh::loadFX(ID3DXEffect *effect) {
+void Mesh::loadFX(ID3DXEffect *effect) 
+{
   mEffect = effect;
 
   mhDiffuseMtrl           = mEffect->GetParameterByName(0, "gDiffuseMtrl");
@@ -36,56 +46,77 @@ void Mesh::loadFX(ID3DXEffect *effect) {
   mhWorldInverseTranspose = mEffect->GetParameterByName(0, "gWorldInverseTranspose");
 }
 
-Mesh::~Mesh() {
-  if(mMesh) ReleaseCOM(mMesh);
-  if(mPRTCompBuffer) ReleaseCOM(mPRTCompBuffer);
+Mesh::~Mesh() 
+{
+  CleanUpMesh();
 }
 
-ID3DXMesh* Mesh::getMesh() {
+ID3DXMesh* Mesh::getMesh() 
+{
   return mMesh;
 }
 
-void Mesh::drawMesh() {
+void Mesh::drawMesh() 
+{
+  HRESULT hr;
   D3DXMATRIX rotX, rotY, rotZ, translation;
-  D3DXMatrixRotationX(&rotX, mRotationX);
-  D3DXMatrixRotationY(&rotY, mRotationY);
-  D3DXMatrixRotationZ(&rotZ, mRotationZ);
-  D3DXMatrixTranslation(&translation, 0.0f, 0.0f, 5.0f);
+  D3DXMatrixRotationX( &rotX, mRotationX );
+  D3DXMatrixRotationY( &rotY, mRotationY );
+  D3DXMatrixRotationZ( &rotZ, mRotationZ );
+  D3DXMatrixTranslation( &translation, 0.0f, 0.0f, 5.0f );
   mWorld = translation * rotX * rotY * rotZ;
 
   D3DXMATRIX worldInverseTranspose;
-  D3DXMatrixInverse(&worldInverseTranspose, 0, &mWorld);
-  D3DXMatrixTranspose(&worldInverseTranspose, &worldInverseTranspose);
+  D3DXMatrixInverse( &worldInverseTranspose, 0, &mWorld );
+  D3DXMatrixTranspose( &worldInverseTranspose, &worldInverseTranspose );
 
-  mEffect->SetMatrix(mhWorldInverseTranspose, &worldInverseTranspose);
-  mEffect->SetValue(mhWorld, &mWorld, sizeof(D3DXMATRIX));
-  mEffect->SetValue(mhSpecularMtrl, &mSpecularMtrl, sizeof(D3DXCOLOR));
-  mEffect->SetValue(mhSpecularPower, &mSpecularPower, sizeof(D3DXCOLOR));
+  mEffect->SetMatrix( mhWorldInverseTranspose, &worldInverseTranspose );
+  mEffect->SetValue( mhWorld, &mWorld, sizeof(D3DXMATRIX) );
+  mEffect->SetValue( mhSpecularMtrl, &mSpecularMtrl, sizeof(D3DXCOLOR) );
+  mEffect->SetValue( mhSpecularPower, &mSpecularPower, sizeof(D3DXCOLOR) );
   mEffect->CommitChanges();
 
   DWORD dwNumMeshes = 0;
   getMesh()->GetAttributeTable( NULL, &dwNumMeshes );
+  
   for( UINT i = 0; i < dwNumMeshes; i++ ) {
-    mEffect->SetValue(mhDiffuseMtrl, &getDiffuseMaterial(i), sizeof(D3DXCOLOR));
+    D3DXCOLOR material;
+
+    if(mTextures[i] != NULL)
+    {
+      hr = mEffect->SetTexture( "AlbedoTex", mTextures[i] );
+      material = D3DXCOLOR( 1.0f, 1.0f, 1.0f, 1.0f );
+    }    
+    else 
+    {
+      material = D3DXCOLOR( 1.0f, 1.0f, 1.0f, 1.0f );
+    }
+    
+    hr = mEffect->SetValue( mhDiffuseMtrl, &material, sizeof(D3DXCOLOR) );
+    
     mEffect->CommitChanges();
     mMesh->DrawSubset( i );
   }
 }
 
-DWORD Mesh::GetNumFaces() {
+DWORD Mesh::GetNumFaces() 
+{
   return mMesh->GetNumFaces();
 }
 
-DWORD Mesh::GetNumVertices() {
+DWORD Mesh::GetNumVertices() 
+{
   return mMesh->GetNumVertices();
 }
 
-HRESULT Mesh::AdjustMeshDecl( IDirect3DDevice9* pd3dDevice, ID3DXMesh** ppMesh )
+HRESULT Mesh::AdjustMeshDecl()
 {
-  LPD3DXMESH pInMesh = *ppMesh;
+  HRESULT hr;
+  
+  LPD3DXMESH pInMesh = mMesh;
   LPD3DXMESH pOutMesh = NULL;
 
-  D3DVERTEXELEMENT9 vertDecl[MAX_FVF_DECL_SIZE] =
+  D3DVERTEXELEMENT9 vertDecl[ MAX_FVF_DECL_SIZE ] =
   {
     {0,  0,  D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0},
     {0,  12, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_NORMAL, 0},
@@ -101,22 +132,28 @@ HRESULT Mesh::AdjustMeshDecl( IDirect3DDevice9* pd3dDevice, ID3DXMesh** ppMesh )
     D3DDECL_END()
   };
 
-  PD( pInMesh->CloneMesh( pInMesh->GetOptions(), vertDecl, pd3dDevice, &pOutMesh ) , L"clone mesh");
+  hr = pInMesh->CloneMesh( pInMesh->GetOptions(), vertDecl, mDevice, &pOutMesh );
+  PD( hr, L"clone mesh" );
+  if( FAILED(hr) ) return hr;
 
-  if( !DoesMeshHaveUsage( pInMesh, D3DDECLUSAGE_NORMAL ) )
-    PD( D3DXComputeNormals( pOutMesh, NULL ), L"compute normals");
+  if( !DoesMeshHaveUsage( D3DDECLUSAGE_NORMAL ) )
+  {
+    hr = D3DXComputeNormals( pOutMesh, NULL );
+    PD( hr, L"compute normals" );
+    if( FAILED(hr) ) return hr;
+  }
 
   ReleaseCOM( pInMesh )
 
-  *ppMesh = pOutMesh;
+  mMesh = pOutMesh;
 
-  return S_OK;
+  return D3D_OK;
 }
 
-bool DoesMeshHaveUsage( ID3DXMesh* pMesh, BYTE Usage )
+bool Mesh::DoesMeshHaveUsage( BYTE Usage )
 {
-  D3DVERTEXELEMENT9 decl[MAX_FVF_DECL_SIZE];
-  pMesh->GetDeclaration( decl );
+  D3DVERTEXELEMENT9 decl[ MAX_FVF_DECL_SIZE ];
+  mMesh->GetDeclaration( decl );
 
   for( int di = 0; di < MAX_FVF_DECL_SIZE; di++ )
   {
@@ -129,105 +166,126 @@ bool DoesMeshHaveUsage( ID3DXMesh* pMesh, BYTE Usage )
   return false;
 }
 
-HRESULT AttribSortMesh( ID3DXMesh** ppInOutMesh )
+HRESULT Mesh::AttribSortMesh()
 {
-  ID3DXMesh* pInputMesh = *ppInOutMesh;
-
+  HRESULT hr;
   ID3DXMesh* pTempMesh = NULL;
-  DWORD* rgdwAdjacency = new DWORD[pInputMesh->GetNumFaces() * 3];
-  DWORD* rgdwAdjacencyOut = new DWORD[pInputMesh->GetNumFaces() * 3];
+  DWORD* rgdwAdjacency = new DWORD[ mMesh->GetNumFaces() * 3 ];
+  DWORD* rgdwAdjacencyOut = new DWORD[ mMesh->GetNumFaces() * 3 ];
 
-  PD( pInputMesh->GenerateAdjacency( 1e-6f, rgdwAdjacency ),
-      L"generate adjacency" );
+  hr = mMesh->GenerateAdjacency( 1e-6f, rgdwAdjacency );
+  PD( hr, L"generate adjacency" );
+  
+  if( FAILED(hr) ) return hr;
 
-  PD( pInputMesh->Optimize( D3DXMESHOPT_ATTRSORT | D3DXMESHOPT_COMPACT ,
-                            rgdwAdjacency, rgdwAdjacencyOut, NULL, NULL,
-                            &pTempMesh ),
-      L"optimize" );
+  hr = mMesh->Optimize( D3DXMESHOPT_ATTRSORT | D3DXMESHOPT_COMPACT ,
+                        rgdwAdjacency, rgdwAdjacencyOut, NULL, NULL,
+                        &pTempMesh );
+  PD( hr, L"optimize" );
 
-  ReleaseCOM(pInputMesh);
-  pInputMesh = pTempMesh;
+  if( FAILED(hr) ) return hr;
+
+  ReleaseCOM( mMesh )
+  mMesh = pTempMesh;
   delete []rgdwAdjacency;
   delete []rgdwAdjacencyOut;
-  *ppInOutMesh = pTempMesh;
-
-  return S_OK;
+  
+  return D3D_OK;
 }
 
-void Mesh::setPRTConstantsInEffect() {
+HRESULT Mesh::setPRTConstantsInEffect() 
+{
+  HRESULT hr;
+
   DWORD mNumChannels = 3;
   DWORD mOrder = 5;
   DWORD dwNumPCA = mNumChannels * mOrder * mOrder;
   if(dwNumPCA > 24) dwNumPCA = 24;
   UINT dwNumClusters = mPRTCompBuffer->GetNumClusters();
   
-  PD( mEffect->SetFloatArray( "aPRTConstants", mPRTConstants,
-                              dwNumClusters * ( 4 + mNumChannels * dwNumPCA ) ),
-      L"set constants in effect" );
+  UINT size = dwNumClusters * ( 4 + mNumChannels * dwNumPCA );
+  hr =  mEffect->SetFloatArray( "aPRTConstants", mPRTConstants, size );
+  
+  PD( hr, L"set float array" );
+  return hr;
 }
 
-HRESULT Mesh::LoadMesh()
+HRESULT Mesh::LoadMesh(WCHAR* directory, WCHAR* name, WCHAR* extension)
+{
+  CleanUpMesh();
+    
+  SetDirectory( directory );
+  SetName( name );
+  WCHAR* meshfile = Concat( name, extension );
+  WCHAR* meshpath = Concat( directory, meshfile );
+  
+  D3DXLoadMeshFromX( AppendToRootDir(meshpath) , 
+                    D3DXMESH_MANAGED | D3DXMESH_32BIT, mDevice, NULL, 
+                    &mMaterialBuffer, NULL, &mNumMaterials, &mMesh );
+  
+  mMaterials = (D3DXMATERIAL*)mMaterialBuffer->GetBufferPointer();
+    
+  PD( AdjustMeshDecl(), L"adjust mesh delaration" );
+  PD( AttribSortMesh(), "attribute sort mesh" );
+  PD( LoadTextures(), L"load textures" );
+
+  return S_OK;
+}
+
+HRESULT Mesh::LoadTextures() 
+{
+  HRESULT hr;
+
+  for( UINT i = 0; i < mNumMaterials; i++ )
+  {
+    if ( mMaterials[i].pTextureFilename ) 
+    {
+      CHAR* filename_c = mMaterials[i].pTextureFilename;
+      
+      DWORD length = MultiByteToWideChar( CP_ACP, 0, filename_c, -1, NULL, 0 );
+      WCHAR* filename_w = new WCHAR[length];
+      MultiByteToWideChar( CP_ACP, 0, filename_c, -1, filename_w, length );
+      WCHAR* filepath = Concat( GetDirectory(), filename_w );
+
+      OutputDebugString( L"texture specified for material:\n" );
+      OutputDebugString( filepath );
+      OutputDebugString( L"\n" );
+
+      IDirect3DTexture9* texture;
+      hr = D3DXCreateTextureFromFileEx( mDevice, AppendToRootDir(filepath),
+                                        D3DX_DEFAULT, D3DX_DEFAULT, 
+                                        D3DX_DEFAULT, 0, D3DFMT_UNKNOWN, 
+                                        D3DPOOL_MANAGED, D3DX_DEFAULT, 
+                                        D3DX_DEFAULT, 0, NULL, 
+                                        NULL, &texture );
+      PD( hr, L"create texture from file" );
+      if( FAILED(hr) ) return hr;
+
+      mTextures.push_back( texture );
+      hasTextures = true;
+
+      delete [] filename_w;
+    } 
+    
+    else 
+    {
+      OutputDebugString( L"no texture specified for material\n" );
+      mTextures.push_back( NULL );
+    }
+  }
+
+  return D3D_OK;
+}
+
+void Mesh::CleanUpMesh() 
 {
   ReleaseCOM( mMesh )
+  ReleaseCOM( mMaterialBuffer );
   
-  WCHAR* model = L"models/bigship1.x";
-  D3DXLoadMeshFromX(AppendToRootDir(model) , D3DXMESH_MANAGED | D3DXMESH_32BIT,
-                    mDevice, NULL, NULL, NULL, NULL, &mMesh );
-  
-  AdjustMeshDecl( mDevice, &mMesh );
-  AttribSortMesh( &mMesh );
-
-  return S_OK;
-}
-
-HRESULT Mesh::CreateMeshFrom(std::vector<Vertex> vertices, std::vector<Face> faces){
-  DWORD numFaces = faces.size();
-  DWORD numVertices = vertices.size();
-
-  D3DVERTEXELEMENT9 localVertDecl[MAX_FVF_DECL_SIZE] =
+  for( int i = 0; i < mTextures.size(); i++ )
   {
-    {0,  0,  D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0},
-    {0,  12, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_NORMAL, 0},
-    D3DDECL_END()
-  };
-
-  struct LocalVertex {
-    D3DXVECTOR3 pos;
-    D3DXVECTOR3 normal;
-  };
-  
-  PD(D3DXCreateMesh(numFaces, numVertices, D3DXMESH_MANAGED | D3DXMESH_32BIT,
-                    localVertDecl, mDevice, &mMesh),
-     L"create mesh");
-
-  LocalVertex* pVertices = NULL;
-  mMesh->LockVertexBuffer(0, (void**)&pVertices);
-  for ( DWORD i = 0; i < numVertices; ++i )
-  {
-    pVertices[i].pos = D3DXVECTOR3(vertices[i].x, vertices[i].y, vertices[i].z);
+    ReleaseCOM( mTextures[i] )
   }
-  mMesh->UnlockVertexBuffer();
-
-  DWORD* pIndices = NULL;
-  mMesh->LockIndexBuffer(0, (void**)&pIndices);
-  for ( DWORD i = 0; i < numFaces; i++ )
-  {
-    pIndices[3 * i]     = faces[i].vertices[0];
-    pIndices[3 * i + 1] = faces[i].vertices[1];
-    pIndices[3 * i + 2] = faces[i].vertices[2];
-  }
-  mMesh->UnlockIndexBuffer();
-
-  DWORD* pAdjacency = new DWORD[numFaces * 3];
-  mMesh->GenerateAdjacency(1e-6f, pAdjacency);
-
-  PD(D3DXComputeNormals(mMesh, pAdjacency),
-     L"compute normals");
-
-  delete [] pAdjacency;
-
-  AdjustMeshDecl( mDevice, &mMesh );
-  AttribSortMesh( &mMesh );
-
-  return S_OK;
+  
+  mTextures.clear();
 }
