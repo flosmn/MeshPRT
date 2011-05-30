@@ -76,7 +76,7 @@
     <ClCompile Include="..\..\Camera.cpp" />
     <ClCompile Include="..\..\d3dApp.cpp" />
     <ClCompile Include="..\..\d3dUtil.cpp" />
-    <ClCompile Include="..\..\DiffuseDemo.cpp" />
+    <ClCompile Include="..\..\MeshPRT.cpp" />
     <ClCompile Include="..\..\DirectInput.cpp" />
     <ClCompile Include="..\..\GfxStats.cpp" />
     <ClCompile Include="..\..\Light.cpp" />
