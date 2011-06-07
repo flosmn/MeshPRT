@@ -48,6 +48,12 @@
     <ClInclude Include="..\..\localConfig.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\CubeMap.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\LightSource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\Camera.cpp">
@@ -80,9 +86,15 @@
     <ClCompile Include="..\..\MeshPRT.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\CubeMap.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\shader\diffuse.fx">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="..\..\shader\cubemap.fx">
       <Filter>Resource Files</Filter>
     </None>
   </ItemGroup>

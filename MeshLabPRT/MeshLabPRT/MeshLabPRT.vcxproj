@@ -61,11 +61,13 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Camera.h" />
+    <ClInclude Include="..\..\CubeMap.h" />
     <ClInclude Include="..\..\d3dApp.h" />
     <ClInclude Include="..\..\d3dUtil.h" />
     <ClInclude Include="..\..\DirectInput.h" />
     <ClInclude Include="..\..\GfxStats.h" />
     <ClInclude Include="..\..\Light.h" />
+    <ClInclude Include="..\..\LightSource.h" />
     <ClInclude Include="..\..\localConfig.h" />
     <ClInclude Include="..\..\Mesh.h" />
     <ClInclude Include="..\..\MeshDatastructures.h" />
@@ -74,6 +76,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\Camera.cpp" />
+    <ClCompile Include="..\..\CubeMap.cpp" />
     <ClCompile Include="..\..\d3dApp.cpp" />
     <ClCompile Include="..\..\d3dUtil.cpp" />
     <ClCompile Include="..\..\MeshPRT.cpp" />
@@ -85,6 +88,7 @@
     <ClCompile Include="..\..\Window.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\..\shader\cubemap.fx" />
     <None Include="..\..\shader\diffuse.fx" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

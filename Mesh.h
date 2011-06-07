@@ -7,21 +7,24 @@ public:
   Mesh();
 	virtual ~Mesh();
 
-  ID3DXMesh* getMesh();
+  ID3DXMesh* GetMesh();
  
   HRESULT LoadMesh(WCHAR* directory, WCHAR* name, WCHAR* extension);
   
-  void drawMesh();
-  void loadFX(ID3DXEffect *effect);
+  void DrawMesh();
+  void LoadFX(ID3DXEffect *effect);
      
   DWORD GetNumVertices();
   DWORD GetNumFaces();
       
-  void setPRTCompBuffer(ID3DXPRTCompBuffer* compBuffer) { mPRTCompBuffer = compBuffer; }
-  void setPRTConstants(float* prtConstants) { mPRTConstants = prtConstants; }
-  HRESULT setPRTConstantsInEffect();
+  void SetPRTCompBuffer(ID3DXPRTCompBuffer* compBuffer) { mPRTCompBuffer = compBuffer; }
+  ID3DXPRTCompBuffer* GetPRTCompBuffer() { return mPRTCompBuffer; }
+  
+  void SetPRTConstants(float* prtConstants) { mPRTConstants = prtConstants; }
+  
+  HRESULT SetPRTConstantsInEffect();
 
-  D3DXCOLOR getDiffuseMaterial(int i);
+  D3DXCOLOR GetDiffuseMaterial(int i);
 
   void SetDirectory(WCHAR* dir) { directory = dir; } 
   WCHAR* GetDirectory() { return directory; }
@@ -29,6 +32,7 @@ public:
   void SetName(WCHAR* _name) { name = _name; } 
   WCHAR* GetName() { return name; }
 
+  IDirect3DTexture9* GetTextures() { return mTextures[0]; }
   bool HasTextures() { return hasTextures; }
 
 protected:

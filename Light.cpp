@@ -13,19 +13,19 @@ Light::Light() {
 Light::~Light() {
 }
 
-HRESULT Light::CalculateSHCoefficients() {
+HRESULT Light::CalculateSHCoefficients(DWORD order) {
   HRESULT hr;
-  DWORD order = 5;
-  
+    
   D3DXVECTOR3 lightDirection = D3DXVECTOR3( -mLightDirection.x, 
                                             -mLightDirection.y,
                                             -mLightDirection.z);
   
-  hr = D3DXSHEvalDirectionalLight( order, &lightDirection, 
-                                   mLightColor.r, mLightColor.g, mLightColor.b,
-                                   mSHCoeffsRed, mSHCoeffsGreen, mSHCoeffsBlue );
+  hr = D3DXSHEvalConeLight( order, &lightDirection, D3DX_PI/4,
+                                   mLightColor.r,
+                                   mLightColor.g,
+                                   mLightColor.b,
+                                   mSHCoeffsRed, mSHCoeffsGreen, mSHCoeffsBlue);
   
-  PD( hr, L"eval directional light" );
   return hr;
 }
 

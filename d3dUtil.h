@@ -35,6 +35,10 @@ WCHAR* AppendToRootDir(const WCHAR *b);
 
 WCHAR* GetRootDir();
 
+HRESULT LoadEffectFile( IDirect3DDevice9* device, WCHAR* file, 
+                        const D3DXMACRO *defines, DWORD flags, 
+                        LPD3DXEFFECT *effect );
+
 //===============================================================
 // Clean up
 

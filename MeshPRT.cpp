@@ -6,6 +6,7 @@
 #include "Camera.h"
 #include "PRTEngine.h"
 
+
 class MeshPRT : public D3DApp
 {
 public:
@@ -23,9 +24,15 @@ public:
   void buildFX(Mesh* mesh);
   void buildViewMtx();
   void buildProjMtx();
-
+  
 private:
+  HRESULT UpdateLighting();
+  void SetTechnique();
+
   bool phongShading;
+  bool environmentLighting;
+
+  float reflectivity;
 
   GfxStats* mGfxStats;
 
@@ -33,13 +40,15 @@ private:
   D3DXHANDLE   mhPerVertexLightingTechnique;
   D3DXHANDLE   mhPerPixelLightingTechniqueWithTexture;
   D3DXHANDLE   mhPerPixelLightingTechniqueWithoutTexture;
-  D3DXHANDLE   mhPRTLightingTechnique;
+  D3DXHANDLE   mhPRTLightingTechniqueWithTexture;
+  D3DXHANDLE   mhPRTLightingTechniqueWithoutTexture;
   D3DXHANDLE   mhView;
   D3DXHANDLE   mhProjection;
   D3DXHANDLE   mhEyePosW;
   D3DXHANDLE   mhLightPositionW;
   D3DXHANDLE   mhLightVecW;
   D3DXHANDLE   mhLightColor;
+  D3DXHANDLE   mhReflectivity;
 
   D3DXMATRIX mWorld;
   D3DXMATRIX mProj;
@@ -47,6 +56,7 @@ private:
   Mesh *mMesh;
   Camera *mCamera;
   PRTEngine* mPRTEngine;
+  CubeMap* mCubeMap;
   Light* mLight;
 };
 
@@ -77,24 +87,37 @@ MeshPRT::MeshPRT( std::string winCaption, D3DDEVTYPE devType, DWORD requestedVP 
   }
 
   phongShading = false;
+  environmentLighting = true;
+  reflectivity = 0.5f;
+
+  HRESULT hr;
+
+  DWORD order = 6;
 
   mMesh = new Mesh(gd3dDevice);
-  mMesh->LoadMesh(L"models/", L"wall_with_pillars", L".x");
-  
-  mPRTEngine = new PRTEngine(gd3dDevice);
-  
+  hr = mMesh->LoadMesh(L"models/", L"bigship1", L".x");
+  PD(hr, L"load mesh");
+
+  mCubeMap = new CubeMap(gd3dDevice);
+  hr = mCubeMap->LoadCubeMap(L"cubemaps/", L"stpeters_cross", L".dds");
+  PD(hr, L"load cube map");
+  hr = mCubeMap->CalculateSHCoefficients(order);
+  PD(hr, L"calculate SHCoefficients of cube map light");
+     
   mLight = new Light( D3DXVECTOR3(0.0f, 5.0f, -5.0f), 
                       D3DXVECTOR3(-1.0f, -1.0f, 1.0f), 
                       D3DXCOLOR(1.0f, 1.0f, 1.0f, 1.0f) );
   
-  mLight->CalculateSHCoefficients();
+  hr = mLight->CalculateSHCoefficients(order);
+  PD(hr, L"calculate SHCoefficients of directional light");
 
-  mPRTEngine->getCoefficientsForMesh(mMesh, mLight);
-
+  mPRTEngine = new PRTEngine(gd3dDevice, order);
+  mPRTEngine->CalculateSHCoefficients(mMesh);
+   
   buildFX(mMesh);
-  mMesh->loadFX(mFX);
+  mMesh->LoadFX(mFX);
 
-  mMesh->setPRTConstantsInEffect();
+  UpdateLighting();
 
   mGfxStats = new GfxStats();
 
@@ -157,49 +180,81 @@ void MeshPRT::updateScene(float dt)
   gDInput->poll();
 
   if( gDInput->keyDown(DIK_P) )	 
-    phongShading = !phongShading;
+    phongShading = true;
+
+  if( gDInput->keyDown(DIK_O) )	 
+    phongShading = false;
+
+  if( gDInput->keyDown(DIK_N) && !environmentLighting )	 
+  {
+    environmentLighting = true;
+    UpdateLighting();
+  }
+
+  if( gDInput->keyDown(DIK_M) && environmentLighting )
+  {
+    environmentLighting = false;
+    UpdateLighting();
+  }
+
+  if( gDInput->keyDown(DIK_Z) )
+    reflectivity = reflectivity - 0.0001f;
+
+  if( gDInput->keyDown(DIK_X) )
+    reflectivity = reflectivity + 0.0001f;
+}
+
+HRESULT MeshPRT::UpdateLighting(){
+  HRESULT hr;
+    
+  if(environmentLighting) {
+    hr = mPRTEngine->ConvoluteSHCoefficients(mMesh, mCubeMap);
+  }
+  else{
+    hr = mPRTEngine->ConvoluteSHCoefficients(mMesh, mLight);
+  }
+
+  PD(hr, L"convolute sh coefficients");
+  if(FAILED(hr)) return hr;
+
+  mMesh->SetPRTConstantsInEffect();
+
+  return D3D_OK;
 }
 
 
 void MeshPRT::drawScene()
 {
   D3DXCOLOR color = D3DXCOLOR(0.3f, 0.3f, 0.3f, 0.0f);
-  // Clear the backbuffer and depth buffer.
   gd3dDevice->Clear(0, 0, D3DCLEAR_ZBUFFER, 0xffeeeeee, 1.0f, 0);
   gd3dDevice->Clear(0, 0, D3DCLEAR_TARGET, color, 1.0f, 0);
 
   gd3dDevice->BeginScene();
-
-  // Setup the rendering FX
-  if(phongShading){
-    if( mMesh->HasTextures() )
-    {
-      mFX->SetTechnique(mhPerPixelLightingTechniqueWithTexture);
-    }
-    else
-    {
-      mFX->SetTechnique(mhPerPixelLightingTechniqueWithoutTexture);
-    }
+     
+  if(environmentLighting) {
+    D3DXMATRIX mWVP = mCamera->view() * mProj;
+    mCubeMap->DrawCubeMap(&mWVP);
   }
-  else {
-    mFX->SetTechnique(mhPRTLightingTechnique);
-  }
+  
+  SetTechnique();
 
-  mFX->SetMatrix(mhView, &(mCamera->view()));
+  mFX->SetTexture( "EnvMap", mCubeMap->GetTexture() );
+  mFX->SetFloat( "gReflectivity", reflectivity );
   mFX->SetValue(mhEyePosW, &(mCamera->pos()), sizeof(D3DXVECTOR3));
+  mFX->SetMatrix(mhView, &(mCamera->view()));  
   mFX->SetMatrix(mhProjection, &mProj);
 
   mFX->SetValue(mhLightVecW, &mLight->GetLightDirection(), sizeof(D3DXVECTOR3));
   mFX->SetValue(mhLightPositionW, &mLight->GetLightPosition(), sizeof(D3DXCOLOR));
   mFX->SetValue(mhLightColor, &mLight->GetLightColor(), sizeof(D3DXCOLOR));
-
+  
   // Begin passes.
   UINT numPasses = 0;
   mFX->Begin(&numPasses, 0);
   for(UINT i = 0; i < numPasses; ++i)
   {
     mFX->BeginPass(i);
-    mMesh->drawMesh();
+    mMesh->DrawMesh();
     mFX->EndPass();
   }
   mFX->End();
@@ -213,11 +268,32 @@ void MeshPRT::drawScene()
   gd3dDevice->Present(0, 0, 0, 0);
 }
 
+void MeshPRT::SetTechnique() {
+  if( mMesh->HasTextures() )
+  {
+    if(phongShading) {
+      mFX->SetTechnique(mhPerPixelLightingTechniqueWithTexture);
+    }
+    else {
+      mFX->SetTechnique(mhPRTLightingTechniqueWithTexture);
+    }    
+  }
+  else
+  {
+    if(phongShading) {
+      mFX->SetTechnique(mhPerPixelLightingTechniqueWithoutTexture);
+    }
+    else {
+      mFX->SetTechnique(mhPRTLightingTechniqueWithoutTexture);
+    }    
+  }
+}
+
 void MeshPRT::buildFX(Mesh* mesh)
 {
-  UINT dwNumChannels = 3; //mesh->getPRTCompBuffer()->GetNumChannels();
-  UINT dwNumClusters = 4; //mesh->getPRTCompBuffer()->GetNumClusters();
-  UINT dwNumPCA = 12; //mesh->getPRTCompBuffer()->GetNumPCA();
+  UINT dwNumChannels = mesh->GetPRTCompBuffer()->GetNumChannels();
+  UINT dwNumClusters = mesh->GetPRTCompBuffer()->GetNumClusters();
+  UINT dwNumPCA = mesh->GetPRTCompBuffer()->GetNumPCA();
 
   // The number of vertex consts need by the shader can't exceed the 
   // amount the HW can support
@@ -237,38 +313,24 @@ void MeshPRT::buildFX(Mesh* mesh)
   aDefines[1].Definition = szMaxNumPCA;
   aDefines[2].Name = NULL;
   aDefines[2].Definition = NULL;
-
-  // Create the FX from a .fx file.
-  ID3DXBuffer* errors = 0;
-  LPCWSTR effectName = L"shader/diffuse.fx";
-
-  PD(D3D_OK, L"try create effect from file: ");
-  PD(D3D_OK, effectName);
-  HRESULT hr = D3DXCreateEffectFromFile(gd3dDevice, AppendToRootDir(effectName),
-                              aDefines, 0, D3DXSHADER_DEBUG, 0, &mFX, &errors);
-  PD( hr, L"create effect from file" );
-
-  if( errors ) {
-    char* error_c = (char*)errors->GetBufferPointer();
-    DWORD length = MultiByteToWideChar( CP_ACP, 0, error_c, -1, NULL, 0 );
-    WCHAR* error_w = new WCHAR[length];
-    MultiByteToWideChar( CP_ACP, 0, error_c, -1, error_w, length );
-    OutputDebugString(error_w);
-    delete [] error_c;
-    delete [] error_w;
-  }
-
+  
+  WCHAR* effectName = L"shader/diffuse.fx";
+  PD( LoadEffectFile(gd3dDevice, effectName, aDefines, D3DXSHADER_DEBUG, &mFX),
+      Concat(L"load effect file ", effectName) );
+    
   // Obtain handles.
   mhPerVertexLightingTechnique = mFX->GetTechniqueByName("PerVertexLighting");
   mhPerPixelLightingTechniqueWithTexture = mFX->GetTechniqueByName("PerPixelLightingWithTexture");
   mhPerPixelLightingTechniqueWithoutTexture = mFX->GetTechniqueByName("PerPixelLightingWithoutTexture");
-  mhPRTLightingTechnique  = mFX->GetTechniqueByName("PRTLighting");
+  mhPRTLightingTechniqueWithTexture  = mFX->GetTechniqueByName("PRTLightingWithTexture");
+  mhPRTLightingTechniqueWithoutTexture  = mFX->GetTechniqueByName("PRTLightingWithoutTexture");
   mhView                  = mFX->GetParameterByName(0, "gView");
   mhProjection            = mFX->GetParameterByName(0, "gProjection");
   mhLightVecW             = mFX->GetParameterByName(0, "gLightVecW");
   mhEyePosW               = mFX->GetParameterByName(0, "gEyePosW");
   mhLightColor            = mFX->GetParameterByName(0, "gLightColor");
   mhLightPositionW        = mFX->GetParameterByName(0, "gLightPosW");
+  mhReflectivity          = mFX->GetParameterByName(0, "gReflectivity");
 
   PD(D3D_OK, L"done building FX");
 }

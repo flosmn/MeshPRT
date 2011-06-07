@@ -67,5 +67,32 @@ void DbgOutInt(std::string label, int value ) {
  wchar_t *w_str = 0;
  CharArrayToWCharArray(c_str, w_str);
  OutputDebugString( w_str ) ;
- //delete [] w_str;
+}
+
+HRESULT LoadEffectFile( IDirect3DDevice9* device, WCHAR* file, 
+                        const D3DXMACRO *defines, DWORD flags, 
+                        LPD3DXEFFECT *effect )
+{
+  HRESULT hr;
+  ID3DXBuffer* errors = 0;
+    
+  hr = D3DXCreateEffectFromFile( device, AppendToRootDir(file), defines, 
+                                 NULL, D3DXSHADER_DEBUG, NULL, effect, 
+                                 &errors );
+  
+  PD(hr, L"create effect from file");
+ 
+  if( errors ) {
+    char* error_c = (char*)errors->GetBufferPointer();
+    DWORD length = MultiByteToWideChar( CP_ACP, 0, error_c, -1, NULL, 0 );
+    WCHAR* error_w = new WCHAR[length];
+    MultiByteToWideChar( CP_ACP, 0, error_c, -1, error_w, length );
+    OutputDebugString(error_w);
+    delete [] error_c;
+    delete [] error_w;
+  }
+
+  ReleaseCOM(errors);
+
+  return hr;
 }

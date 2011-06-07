@@ -30,12 +30,12 @@ Mesh::Mesh(IDirect3DDevice9 *device)
   mSpecularPower = 8.0f;
 }
 
-D3DXCOLOR Mesh::getDiffuseMaterial(int i) 
+D3DXCOLOR Mesh::GetDiffuseMaterial(int i) 
 {
   return mDiffuseMtrl[0];
 }
 
-void Mesh::loadFX(ID3DXEffect *effect) 
+void Mesh::LoadFX(ID3DXEffect *effect) 
 {
   mEffect = effect;
 
@@ -51,20 +51,15 @@ Mesh::~Mesh()
   CleanUpMesh();
 }
 
-ID3DXMesh* Mesh::getMesh() 
+ID3DXMesh* Mesh::GetMesh() 
 {
   return mMesh;
 }
 
-void Mesh::drawMesh() 
+void Mesh::DrawMesh() 
 {
   HRESULT hr;
-  D3DXMATRIX rotX, rotY, rotZ, translation;
-  D3DXMatrixRotationX( &rotX, mRotationX );
-  D3DXMatrixRotationY( &rotY, mRotationY );
-  D3DXMatrixRotationZ( &rotZ, mRotationZ );
-  D3DXMatrixTranslation( &translation, 0.0f, 0.0f, 5.0f );
-  mWorld = translation * rotX * rotY * rotZ;
+  D3DXMatrixIdentity(&mWorld);
 
   D3DXMATRIX worldInverseTranspose;
   D3DXMatrixInverse( &worldInverseTranspose, 0, &mWorld );
@@ -77,7 +72,7 @@ void Mesh::drawMesh()
   mEffect->CommitChanges();
 
   DWORD dwNumMeshes = 0;
-  getMesh()->GetAttributeTable( NULL, &dwNumMeshes );
+  GetMesh()->GetAttributeTable( NULL, &dwNumMeshes );
   
   for( UINT i = 0; i < dwNumMeshes; i++ ) {
     D3DXCOLOR material;
@@ -193,7 +188,7 @@ HRESULT Mesh::AttribSortMesh()
   return D3D_OK;
 }
 
-HRESULT Mesh::setPRTConstantsInEffect() 
+HRESULT Mesh::SetPRTConstantsInEffect() 
 {
   HRESULT hr;
 
