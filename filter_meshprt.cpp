@@ -118,12 +118,12 @@ bool MyPlugin::applyFilter(QAction */*filter*/, MeshDocument &md,
 
   DirectXMesh *mesh = new DirectXMesh();
   mesh->CreateDirectXMesh(m);
-  //mesh->CloneMesh(mMesh);
+  mesh->CloneMesh(&mMesh);
 
-  //WCHAR* path = L"models/huge.x";
-  //mesh->SaveMeshToFile(AppendToRootDir(path));
+  WCHAR* path = L"models/meshlab.x";
+  mesh->SaveMeshToFile(AppendToRootDir(path));
 
-  window->OpenWindow(0);
+  window->OpenWindow(mMesh);
 
   return true;
 }

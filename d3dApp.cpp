@@ -27,8 +27,6 @@ D3DApp::~D3DApp()
 
 void D3DApp::initDirect3D()
 {
-    // Step 1: Create the IDirect3D9 object.
-
     md3dObject = Direct3DCreate9(D3D_SDK_VERSION);
     if( !md3dObject )
     {
@@ -36,15 +34,10 @@ void D3DApp::initDirect3D()
         PostQuitMessage(0);
     }
 
-
-    // Step 2: Verify hardware support for specified formats in windowed and full screen modes.
-
     D3DDISPLAYMODE mode;
     md3dObject->GetAdapterDisplayMode(D3DADAPTER_DEFAULT, &mode);
     PD(md3dObject->CheckDeviceType(D3DADAPTER_DEFAULT, mDevType, mode.Format, mode.Format, true), L"check device type");
     PD(md3dObject->CheckDeviceType(D3DADAPTER_DEFAULT, mDevType, D3DFMT_X8R8G8B8, D3DFMT_X8R8G8B8, false), L"check device type");
-
-    // Step 3: Check for requested vertex processing and pure device.
 
     D3DCAPS9 caps;
     PD(md3dObject->GetDeviceCaps(D3DADAPTER_DEFAULT, mDevType, &caps), L"get device caps");
@@ -59,8 +52,6 @@ void D3DApp::initDirect3D()
     if( caps.DevCaps & D3DDEVCAPS_PUREDEVICE &&
         devBehaviorFlags & D3DCREATE_HARDWARE_VERTEXPROCESSING)
             devBehaviorFlags |= D3DCREATE_PUREDEVICE;
-
-    // Step 4: Fill out the D3DPRESENT_PARAMETERS structure.
 
     md3dPP.BackBufferWidth            = 0;
     md3dPP.BackBufferHeight           = 0;
@@ -77,8 +68,6 @@ void D3DApp::initDirect3D()
     md3dPP.FullScreen_RefreshRateInHz = D3DPRESENT_RATE_DEFAULT;
     md3dPP.PresentationInterval       = D3DPRESENT_INTERVAL_IMMEDIATE;
 
-
-    // Step 5: Create the device.
 
     PD(md3dObject->CreateDevice(
         D3DADAPTER_DEFAULT, // primary adapter

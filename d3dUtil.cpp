@@ -36,6 +36,12 @@ void PD(const WCHAR* wchar, DWORD dw){
   OutputDebugString(L"\n");
 }
 
+void PD(const WCHAR* first, const WCHAR* second){
+  OutputDebugString(first);
+  OutputDebugString(second);
+  OutputDebugString(L"\n");
+}
+
 void PD(const WCHAR* wchar, float f){
   std::wstringstream sstream;
   sstream << f;

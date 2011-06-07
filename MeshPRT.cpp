@@ -14,6 +14,8 @@ public:
           DWORD requestedVP);
   ~MeshPRT();
 
+  bool IsInitialized();
+
   bool checkDeviceCaps();
   void onLostDevice();
   void onResetDevice();
@@ -26,11 +28,14 @@ public:
   void buildProjMtx();
   
 private:
+  HRESULT Init(ID3DXMesh* mesh);
   HRESULT UpdateLighting();
   void SetTechnique();
 
   bool phongShading;
   bool environmentLighting;
+
+  bool initialized;
 
   float reflectivity;
 
@@ -70,6 +75,7 @@ bool StartDirectX(ID3DXMesh* mesh) {
                D3DCREATE_HARDWARE_VERTEXPROCESSING);
   gd3dApp = &app;
 
+  if(!app.IsInitialized()) return false;
 
   DirectInput di( DISCL_NONEXCLUSIVE|DISCL_FOREGROUND,
                   DISCL_NONEXCLUSIVE|DISCL_FOREGROUND);
@@ -86,54 +92,16 @@ MeshPRT::MeshPRT( std::string winCaption, ID3DXMesh* mesh, D3DDEVTYPE devType, D
     MessageBox(0, L"checkDeviceCaps() Failed", 0, 0);
     PostQuitMessage(0);
   }
+  initialized = false;
 
-  phongShading = false;
-  environmentLighting = true;
-  reflectivity = 0.5f;
-
-  HRESULT hr;
-
-  DWORD order = 6;
-
-  mMesh = new Mesh(gd3dDevice);
-
-  if(mesh == NULL){
-    hr = mMesh->LoadMesh(L"models/", L"bigship1", L".x");
+  HRESULT hr = Init(mesh);
+  PD(hr, L"initialize");
+  if(FAILED(hr)){
+    initialized = false;
   }
   else{
-    // mesh from meshlab
+    initialized = true;
   }
-
-  PD(hr, L"load mesh");
-
-  mCubeMap = new CubeMap(gd3dDevice);
-  hr = mCubeMap->LoadCubeMap(L"cubemaps/", L"stpeters_cross", L".dds");
-  PD(hr, L"load cube map");
-  hr = mCubeMap->CalculateSHCoefficients(order);
-  PD(hr, L"calculate SHCoefficients of cube map light");
-
-  mLight = new Light( D3DXVECTOR3(0.0f, 5.0f, -5.0f), 
-                      D3DXVECTOR3(-1.0f, -1.0f, 1.0f), 
-                      D3DXCOLOR(1.0f, 1.0f, 1.0f, 1.0f) );
-  
-  hr = mLight->CalculateSHCoefficients(order);
-  PD(hr, L"calculate SHCoefficients of directional light");
-
-  mPRTEngine = new PRTEngine(gd3dDevice, order);
-  mPRTEngine->CalculateSHCoefficients(mMesh);
-   
-  buildFX(mMesh);
-  mMesh->LoadFX(mFX);
-
-  UpdateLighting();
-
-  mGfxStats = new GfxStats();
-
-  D3DXMatrixIdentity(&mWorld);
-  
-  onResetDevice();
-
-  mCamera = new Camera();  
 }
 
 MeshPRT::~MeshPRT()
@@ -175,6 +143,70 @@ void MeshPRT::onResetDevice()
   // The aspect ratio depends on the backbuffer dimensions, which can
   // possibly change after a reset.  So rebuild the projection matrix.
   buildProjMtx();
+}
+
+bool MeshPRT::IsInitialized() {
+  return initialized;
+}
+
+HRESULT MeshPRT::Init(ID3DXMesh* mesh) {
+  phongShading = false;
+  environmentLighting = true;
+  reflectivity = 0.5f;
+
+  HRESULT hr;
+
+  DWORD order = 6;
+
+  mMesh = new Mesh(gd3dDevice);
+
+  if(mesh == NULL){
+    hr = mMesh->LoadMesh(L"models/", L"bigship1", L".x");
+  }
+  else{
+    hr = mMesh->LoadMesh(mesh);
+    /* mesh is now released*/
+  }
+  PD(hr, L"load mesh");
+  if(FAILED(hr)) return hr;
+
+  mCubeMap = new CubeMap(gd3dDevice);
+  hr = mCubeMap->LoadCubeMap(L"cubemaps/", L"stpeters_cross", L".dds");
+  PD(hr, L"load cube map");
+  if(FAILED(hr)) return hr;
+
+  hr = mCubeMap->CalculateSHCoefficients(order);
+  PD(hr, L"calculate SHCoefficients of cube map light");
+  if(FAILED(hr)) return hr;
+
+  mLight = new Light( D3DXVECTOR3(0.0f, 5.0f, -5.0f),
+                      D3DXVECTOR3(-1.0f, -1.0f, 1.0f),
+                      D3DXCOLOR(1.0f, 1.0f, 1.0f, 1.0f) );
+
+  hr = mLight->CalculateSHCoefficients(order);
+  PD(hr, L"calculate SHCoefficients of directional light");
+  if(FAILED(hr)) return hr;
+
+  mPRTEngine = new PRTEngine(gd3dDevice, order);
+
+  hr = mPRTEngine->CalculateSHCoefficients(mMesh);
+  PD(hr, L"calculate sh coefficients for mesh");
+  if(FAILED(hr)) return hr;
+
+  buildFX(mMesh);
+  mMesh->LoadFX(mFX);
+
+  UpdateLighting();
+
+  mGfxStats = new GfxStats();
+
+  D3DXMatrixIdentity(&mWorld);
+
+  onResetDevice();
+
+  mCamera = new Camera();
+
+  return D3D_OK;
 }
 
 void MeshPRT::updateScene(float dt)

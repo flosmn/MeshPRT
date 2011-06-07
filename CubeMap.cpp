@@ -34,11 +34,10 @@ HRESULT CubeMap::LoadCubeMap(WCHAR* directory, WCHAR* name, WCHAR* extension){
   WCHAR* cubemapfile = Concat( name, extension );
   WCHAR* cubemappath = Concat( directory, cubemapfile );
 
-  hr = D3DXCreateCubeTextureFromFileEx( mDevice, AppendToRootDir(cubemappath), 
-                                        512, 1, 0, D3DFMT_A16B16G16R16F, 
-                                        D3DPOOL_MANAGED, D3DX_FILTER_LINEAR, 
-                                        D3DX_FILTER_LINEAR, 0, NULL, NULL, 
-                                        &mCubeTexture );
+  WCHAR* path = AppendToRootDir(cubemappath);
+  PD(L"Path: ", path);
+
+  hr = D3DXCreateCubeTextureFromFile( mDevice, path, &mCubeTexture );
   
   PD(hr, L"create cube texture from file");
   if(FAILED(hr)) return hr;

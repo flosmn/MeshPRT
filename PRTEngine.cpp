@@ -16,6 +16,8 @@ PRTEngine::~PRTEngine() {
 }
 
 HRESULT PRTEngine::CalculateSHCoefficients(Mesh* mesh) {
+  HRESULT hr;
+
   ID3DXPRTBuffer* pDataTotal = NULL;
   ID3DXPRTBuffer* pBufferA = NULL;
   ID3DXPRTBuffer* pBufferB = NULL;
@@ -53,12 +55,15 @@ HRESULT PRTEngine::CalculateSHCoefficients(Mesh* mesh) {
   WCHAR* bufferfile = Concat(mesh->GetName(), L".compbuffer");
   WCHAR* bufferpath = Concat(mesh->GetDirectory(), bufferfile);
   
-  PD(D3DXCreatePRTCompBuffer( D3DXSHCQUAL_SLOWHIGHQUALITY, 1, mNumPCA, NULL, 
-                              NULL, pDataTotal, &compPRTBuffer ),
-     L"create compressed prt buffer");
+  hr = D3DXCreatePRTCompBuffer( D3DXSHCQUAL_SLOWHIGHQUALITY, 1, mNumPCA, NULL,
+                                NULL, pDataTotal, &compPRTBuffer );
+  PD(hr, L"create compressed prt buffer");
+  if(FAILED(hr)) return hr;
   
-  PD(D3DXSavePRTCompBufferToFile( AppendToRootDir(bufferpath), compPRTBuffer ),
-     L"save compressed prt buffer to file");
+  hr = D3DXSavePRTCompBufferToFile( AppendToRootDir(bufferpath), compPRTBuffer );
+  PD(hr, L"save compressed prt buffer to file");
+  PD(hr);
+  if(FAILED(hr)) return hr;
   
   mesh->SetPRTCompBuffer(compPRTBuffer);
 

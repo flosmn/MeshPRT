@@ -198,7 +198,7 @@ HRESULT DirectXMesh::SaveMeshToFile(const WCHAR* filename) {
   return hr;
 }
 
-HRESULT DirectXMesh::CloneMesh(ID3DXMesh* target) {
+HRESULT DirectXMesh::CloneMesh(ID3DXMesh** target) {
   HRESULT hr;
 
   D3DVERTEXELEMENT9 decl[MAX_FVF_DECL_SIZE];
@@ -206,7 +206,7 @@ HRESULT DirectXMesh::CloneMesh(ID3DXMesh* target) {
   PD(hr, L"get vertex declaration");
   if(FAILED(hr)) return hr;
 
-  hr = mMesh->CloneMesh( mMesh->GetOptions(), decl, pd3d9Device, &target );
+  hr = mMesh->CloneMesh( mMesh->GetOptions(), decl, pd3d9Device, target );
   PD(hr, L"clone mesh");
 
   return hr;

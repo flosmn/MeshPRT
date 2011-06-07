@@ -233,9 +233,16 @@ HRESULT Mesh::LoadMesh(WCHAR* directory, WCHAR* name, WCHAR* extension)
 }
 
 HRESULT Mesh::LoadMesh(ID3DXMesh* mesh){
+  HRESULT hr;
+
   CleanUpMesh();
 
-  mMesh = mesh;
+  D3DVERTEXELEMENT9 decl[MAX_FVF_DECL_SIZE];
+  hr = mesh->GetDeclaration(decl);
+  hr = mesh->CloneMesh( mesh->GetOptions(), decl, mDevice, &mMesh );
+  PD(hr, L"clone mesh");
+
+  ReleaseCOM(mesh)
 
   SetDirectory( L"models/" );
   SetName( L"meshlab" );

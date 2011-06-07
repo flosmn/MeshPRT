@@ -18,7 +18,7 @@ public:
   ID3DXMesh* GetMesh() { return mMesh; }
   HRESULT CreateDirectXMesh(const MeshModel &meshModel);
   HRESULT SaveMeshToFile(const WCHAR* filename);
-  HRESULT CloneMesh(ID3DXMesh* target);
+  HRESULT CloneMesh(ID3DXMesh** target);
 protected:
   ID3DXMesh* mMesh;
   IDirect3D9* pd3d9;
