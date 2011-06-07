@@ -57,6 +57,10 @@ HRESULT LoadEffectFile( IDirect3DDevice9* device, WCHAR* file,
 // print debug
 void PD(HRESULT, const WCHAR*);
 void PD(HRESULT, const char*);
+void PD(const WCHAR*, DWORD);
+void PD(const WCHAR*, int);
+void PD(const WCHAR*, float);
+void PD(HRESULT);
 void CharArrayToWCharArray(const char* in, WCHAR* out);
 void DbgOutInt(std::string label, int value );
 

@@ -17,7 +17,10 @@ HEADERS += d3d9.h \
     DirectInput.h \
     d3dUtil.h \
     d3dApp.h \
-    Camera.h
+    Camera.h \
+    localConfig.h \
+    LightSource.h \
+    CubeMap.h
 HEADERS += d3dx9.h
 HEADERS += d3dx9d.h
 HEADERS += dinput.h
@@ -34,7 +37,8 @@ SOURCES += \
     filter_meshprt.cpp \
     DirectXMesh.cpp \
     DirectInput.cpp \
-    DiffuseDemo.cpp \
     d3dUtil.cpp \
     d3dApp.cpp \
-    Camera.cpp
+    Camera.cpp \
+    MeshPRT.cpp \
+    CubeMap.cpp

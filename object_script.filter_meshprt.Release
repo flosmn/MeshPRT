@@ -7,9 +7,10 @@ INPUT(
 ./release\filter_meshprt.o
 ./release\DirectXMesh.o
 ./release\DirectInput.o
-./release\DiffuseDemo.o
 ./release\d3dUtil.o
 ./release\d3dApp.o
 ./release\Camera.o
+./release\MeshPRT.o
+./release\CubeMap.o
 ./release\moc_filter_meshprt.o
 );

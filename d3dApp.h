@@ -5,7 +5,7 @@
 #include <tchar.h>
 #include <string>
 
-bool StartDirectX();
+bool StartDirectX(ID3DXMesh* mesh);
 
 class D3DApp
 {

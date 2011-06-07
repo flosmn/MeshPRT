@@ -11,18 +11,20 @@
 #include "Mesh.h"
 
 class DirectXMesh {
+public:
+  DirectXMesh();
+  ~DirectXMesh();
+
+  ID3DXMesh* GetMesh() { return mMesh; }
+  HRESULT CreateDirectXMesh(const MeshModel &meshModel);
+  HRESULT SaveMeshToFile(const WCHAR* filename);
+  HRESULT CloneMesh(ID3DXMesh* target);
 protected:
-  ID3DXMesh* pMesh;
+  ID3DXMesh* mMesh;
   IDirect3D9* pd3d9;
   IDirect3DDevice9* pd3d9Device;
 
   void CreateDevice();
   void ParseMesh(const MeshModel &m, std::vector<Vertex> &, std::vector<Face> &);
-public:
-  DirectXMesh();
-  ~DirectXMesh();
-
-  HRESULT CreateDirectXMesh(const MeshModel &meshModel);
-  HRESULT SaveMeshToFile(const WCHAR* filename);
 };
 

@@ -42,8 +42,7 @@ HRESULT CubeMap::LoadCubeMap(WCHAR* directory, WCHAR* name, WCHAR* extension){
   
   PD(hr, L"create cube texture from file");
   if(FAILED(hr)) return hr;
-  
-  
+    
   WCHAR* effectName = L"shader/cubemap.fx";
   hr = LoadEffectFile(gd3dDevice, effectName, 0, D3DXSHADER_DEBUG, &mEffect);
   

@@ -10,6 +10,7 @@ public:
   ID3DXMesh* GetMesh();
  
   HRESULT LoadMesh(WCHAR* directory, WCHAR* name, WCHAR* extension);
+  HRESULT LoadMesh(ID3DXMesh* mesh);
   
   void DrawMesh();
   void LoadFX(ID3DXEffect *effect);

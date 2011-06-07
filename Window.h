@@ -6,6 +6,7 @@
 #endif
 
 #include <Windows.h>
+#include "d3dUtil.h"
 
 DWORD WINAPI NewWindow(LPVOID lpParameter);
 
@@ -18,7 +19,7 @@ void SetGlobalWindowHandle(HWND handle);
 void RegClass();
 void InitMainWindow();
 
-LRESULT CALLBACK WndProc(HWND windowHandle, UINT msg, WPARAM wParam, LPARAM lParam);
+HRESULT CALLBACK WndProc(HWND windowHandle, UINT msg, WPARAM wParam, LPARAM lParam);
 int Run();
 
 class Window
@@ -26,6 +27,6 @@ class Window
 public:
   Window();
   ~Window();
-  void OpenWindow();
+  void OpenWindow(ID3DXMesh*);
 };
   

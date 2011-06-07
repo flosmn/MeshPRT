@@ -13,7 +13,8 @@ DirectInput::DirectInput( DWORD keyboardCoopFlags,
   ZeroMemory( mKeyboardState, sizeof(mKeyboardState) );
   ZeroMemory( &mMouseState, sizeof(mMouseState) );
 
-  hr = DirectInput8Create(GlobalInstance(),
+  HINSTANCE hInstance = (HINSTANCE)GetModuleHandle(NULL);
+  hr = DirectInput8Create(hInstance,
                           DIRECTINPUT_VERSION,
                           IID_IDirectInput8,
                           (void**)&mDInput,
@@ -30,9 +31,6 @@ DirectInput::DirectInput( DWORD keyboardCoopFlags,
                                       keyboardCoopFlags);
   PD( hr, L"set cooperative level" );
 
-  //hr = mKeyboard->Acquire();
-  //PD( hr, L"aquire" );
-
   hr = mDInput->CreateDevice( GUID_SysMouse, &mMouse, 0 );
   PD( hr, L"create device" );
 
@@ -42,9 +40,6 @@ DirectInput::DirectInput( DWORD keyboardCoopFlags,
   PD( mMouse->SetCooperativeLevel( GlobalWindowHandle(),
                                    mouseCoopFlags ),
       L"set cooperative level");
-
-  //PD( mMouse->Acquire(),
-  //    L"aquire");
 }
 
 DirectInput::~DirectInput()

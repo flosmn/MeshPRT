@@ -28,6 +28,38 @@ void PD(HRESULT result, const char* str) {
   delete [] wchar;
 }
 
+void PD(const WCHAR* wchar, DWORD dw){
+  std::wstringstream sstream;
+  sstream << dw;
+  OutputDebugString(wchar);
+  OutputDebugString(sstream.str().c_str());
+  OutputDebugString(L"\n");
+}
+
+void PD(const WCHAR* wchar, float f){
+  std::wstringstream sstream;
+  sstream << f;
+  OutputDebugString(wchar);
+  OutputDebugString(sstream.str().c_str());
+  OutputDebugString(L"\n");
+}
+
+void PD(const WCHAR* wchar, int i){
+  std::wstringstream sstream;
+  sstream << i;
+  OutputDebugString(wchar);
+  OutputDebugString(sstream.str().c_str());
+  OutputDebugString(L"\n");
+}
+
+void PD(HRESULT hr){
+  std::wstringstream sstream;
+  sstream << hr;
+  OutputDebugString(L"HRESULT: ");
+  OutputDebugString(sstream.str().c_str());
+  OutputDebugString(L"\n");
+}
+
 void CharArrayToWCharArray(const char* in, WCHAR* out) {
   DWORD dwNum = MultiByteToWideChar (CP_ACP, 0, in, -1, NULL, 0);
   WCHAR *w_error = 0;
@@ -76,9 +108,8 @@ HRESULT LoadEffectFile( IDirect3DDevice9* device, WCHAR* file,
   HRESULT hr;
   ID3DXBuffer* errors = 0;
     
-  hr = D3DXCreateEffectFromFile( device, AppendToRootDir(file), defines, 
-                                 NULL, D3DXSHADER_DEBUG, NULL, effect, 
-                                 &errors );
+  hr = D3DXCreateEffectFromFile( device, AppendToRootDir(file), defines,
+                                 0, flags, 0, effect, &errors );
   
   PD(hr, L"create effect from file");
  
@@ -92,7 +123,7 @@ HRESULT LoadEffectFile( IDirect3DDevice9* device, WCHAR* file,
     delete [] error_w;
   }
 
-  ReleaseCOM(errors);
+  ReleaseCOM(errors)
 
   return hr;
 }

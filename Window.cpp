@@ -19,24 +19,24 @@ Window::~Window() {
 
 }
 
-void Window::OpenWindow() {
- CreateThread(NULL, 0, NewWindow, NULL, 0, NULL);
+void Window::OpenWindow(ID3DXMesh* mesh) {
+ CreateThread(NULL, 0, NewWindow, mesh, 0, NULL);
 }
 
 int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE prevInstance,
                     PSTR cmdLine, int showCmd)
 {
-	Window* window = new Window();
+  Window* window = new Window();
   SetGlobalInstance(hInstance);
   InitMainWindow();
-  StartDirectX();
+  StartDirectX(NULL);
 }
 
 DWORD WINAPI NewWindow(LPVOID lpParameter) {
   
   if(gd3dApp == 0) {
     InitMainWindow();
-    StartDirectX();
+    StartDirectX((ID3DXMesh*) lpParameter);
   }
   else {
     // update
@@ -120,10 +120,6 @@ LRESULT CALLBACK WndProc(HWND windowHandle, UINT msg, WPARAM wParam,
   else{
     switch( msg )
     {
-      case WM_LBUTTONDOWN:
-        ::MessageBox(0, L"Hello World", L"Hello", MB_OK);
-        return 0;
-
       case WM_KEYDOWN:
         if( wParam == VK_ESCAPE )
           ::DestroyWindow(GlobalWindowHandle());

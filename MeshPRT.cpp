@@ -10,7 +10,7 @@
 class MeshPRT : public D3DApp
 {
 public:
-  MeshPRT(std::string winCaption, D3DDEVTYPE devType,
+  MeshPRT(std::string winCaption, ID3DXMesh* mesh, D3DDEVTYPE devType,
           DWORD requestedVP);
   ~MeshPRT();
 
@@ -60,24 +60,25 @@ private:
   Light* mLight;
 };
 
-bool StartDirectX() {
+bool StartDirectX(ID3DXMesh* mesh) {
   // Enable run-time memory check for debug builds.
 #if defined(DEBUG) | defined(_DEBUG)
   _CrtSetDbgFlag( _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF );
 #endif
 
-  MeshPRT app( "MeshPRT", D3DDEVTYPE_HAL,  
+  MeshPRT app( "MeshPRT", mesh, D3DDEVTYPE_HAL,
                D3DCREATE_HARDWARE_VERTEXPROCESSING);
   gd3dApp = &app;
 
-  DirectInput di( DISCL_NONEXCLUSIVE|DISCL_FOREGROUND, 
+
+  DirectInput di( DISCL_NONEXCLUSIVE|DISCL_FOREGROUND,
                   DISCL_NONEXCLUSIVE|DISCL_FOREGROUND);
   gDInput = &di;
 
   return gd3dApp->run();
 }
 
-MeshPRT::MeshPRT( std::string winCaption, D3DDEVTYPE devType, DWORD requestedVP )
+MeshPRT::MeshPRT( std::string winCaption, ID3DXMesh* mesh, D3DDEVTYPE devType, DWORD requestedVP )
   : D3DApp(winCaption, devType, requestedVP)
 {
   if(!checkDeviceCaps())
@@ -95,7 +96,14 @@ MeshPRT::MeshPRT( std::string winCaption, D3DDEVTYPE devType, DWORD requestedVP 
   DWORD order = 6;
 
   mMesh = new Mesh(gd3dDevice);
-  hr = mMesh->LoadMesh(L"models/", L"bigship1", L".x");
+
+  if(mesh == NULL){
+    hr = mMesh->LoadMesh(L"models/", L"bigship1", L".x");
+  }
+  else{
+    // mesh from meshlab
+  }
+
   PD(hr, L"load mesh");
 
   mCubeMap = new CubeMap(gd3dDevice);
@@ -103,7 +111,7 @@ MeshPRT::MeshPRT( std::string winCaption, D3DDEVTYPE devType, DWORD requestedVP 
   PD(hr, L"load cube map");
   hr = mCubeMap->CalculateSHCoefficients(order);
   PD(hr, L"calculate SHCoefficients of cube map light");
-     
+
   mLight = new Light( D3DXVECTOR3(0.0f, 5.0f, -5.0f), 
                       D3DXVECTOR3(-1.0f, -1.0f, 1.0f), 
                       D3DXCOLOR(1.0f, 1.0f, 1.0f, 1.0f) );
@@ -174,9 +182,10 @@ void MeshPRT::updateScene(float dt)
   mGfxStats->setVertexCount(mMesh->GetNumVertices());
   mGfxStats->setTriCount(mMesh->GetNumFaces());
   mGfxStats->update(dt);
+
+
   mCamera->update(dt);
 
-  // Get snapshot of input devices.
   gDInput->poll();
 
   if( gDInput->keyDown(DIK_P) )	 
@@ -191,17 +200,26 @@ void MeshPRT::updateScene(float dt)
     UpdateLighting();
   }
 
-  if( gDInput->keyDown(DIK_M) && environmentLighting )
-  {
+  if( gDInput->keyDown(DIK_M) && environmentLighting ) {
     environmentLighting = false;
     UpdateLighting();
   }
 
-  if( gDInput->keyDown(DIK_Z) )
+  if( gDInput->keyDown(DIK_Z) ) {
     reflectivity = reflectivity - 0.0001f;
 
-  if( gDInput->keyDown(DIK_X) )
+    if(reflectivity < 0){
+      reflectivity = 0;
+    }
+  }
+
+  if( gDInput->keyDown(DIK_X) ) {
     reflectivity = reflectivity + 0.0001f;
+
+    if(reflectivity > 1){
+      reflectivity = 1;
+    }
+  }
 }
 
 HRESULT MeshPRT::UpdateLighting(){
@@ -317,7 +335,7 @@ void MeshPRT::buildFX(Mesh* mesh)
   WCHAR* effectName = L"shader/diffuse.fx";
   PD( LoadEffectFile(gd3dDevice, effectName, aDefines, D3DXSHADER_DEBUG, &mFX),
       Concat(L"load effect file ", effectName) );
-    
+
   // Obtain handles.
   mhPerVertexLightingTechnique = mFX->GetTechniqueByName("PerVertexLighting");
   mhPerPixelLightingTechniqueWithTexture = mFX->GetTechniqueByName("PerPixelLightingWithTexture");

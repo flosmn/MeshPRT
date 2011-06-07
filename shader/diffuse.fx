@@ -62,6 +62,7 @@ float4 GetPRTDiffuse( int iClusterOffset, float4 vPCAWeights[NUM_PCA/4] )
     return vDiffuse;
 }
 
+
 // per vertex lighting -------------------------------------------------------------------------------------------
  
 struct OutputPerVertexLightingVS

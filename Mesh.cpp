@@ -77,7 +77,7 @@ void Mesh::DrawMesh()
   for( UINT i = 0; i < dwNumMeshes; i++ ) {
     D3DXCOLOR material;
 
-    if(mTextures[i] != NULL)
+    if(i < mTextures.size() && mTextures[i] != NULL)
     {
       hr = mEffect->SetTexture( "AlbedoTex", mTextures[i] );
       material = D3DXCOLOR( 1.0f, 1.0f, 1.0f, 1.0f );
@@ -207,6 +207,8 @@ HRESULT Mesh::SetPRTConstantsInEffect()
 
 HRESULT Mesh::LoadMesh(WCHAR* directory, WCHAR* name, WCHAR* extension)
 {
+  HRESULT hr;
+  
   CleanUpMesh();
     
   SetDirectory( directory );
@@ -214,17 +216,34 @@ HRESULT Mesh::LoadMesh(WCHAR* directory, WCHAR* name, WCHAR* extension)
   WCHAR* meshfile = Concat( name, extension );
   WCHAR* meshpath = Concat( directory, meshfile );
   
-  D3DXLoadMeshFromX( AppendToRootDir(meshpath) , 
-                    D3DXMESH_MANAGED | D3DXMESH_32BIT, mDevice, NULL, 
-                    &mMaterialBuffer, NULL, &mNumMaterials, &mMesh );
+  hr = D3DXLoadMeshFromX( AppendToRootDir(meshpath) , 
+                          D3DXMESH_MANAGED | D3DXMESH_32BIT, mDevice, NULL, 
+                          &mMaterialBuffer, NULL, &mNumMaterials, &mMesh );
   
+  PD(hr, L"mesh mesh from file");
+  if(FAILED(hr)) return hr;
+
   mMaterials = (D3DXMATERIAL*)mMaterialBuffer->GetBufferPointer();
     
   PD( AdjustMeshDecl(), L"adjust mesh delaration" );
-  PD( AttribSortMesh(), "attribute sort mesh" );
+  PD( AttribSortMesh(), L"attribute sort mesh" );
   PD( LoadTextures(), L"load textures" );
 
-  return S_OK;
+  return D3D_OK;
+}
+
+HRESULT Mesh::LoadMesh(ID3DXMesh* mesh){
+  CleanUpMesh();
+
+  mMesh = mesh;
+
+  SetDirectory( L"models/" );
+  SetName( L"meshlab" );
+
+  PD( AdjustMeshDecl(), L"adjust mesh delaration" );
+  PD( AttribSortMesh(), L"attribute sort mesh" );
+
+  return D3D_OK;
 }
 
 HRESULT Mesh::LoadTextures() 
