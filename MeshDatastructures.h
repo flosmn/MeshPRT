@@ -1,3 +1,6 @@
+#ifndef MESHDATASTRUCTURES_H
+#define MESHDATASTRUCTURES_H
+
 #include "d3dUtil.h"
 
 struct Vertex {
@@ -16,3 +19,4 @@ struct Face {
   DWORD vertices[3];
 };
 
+#endif // MESHDATASTRUCTURES_H

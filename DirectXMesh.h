@@ -1,8 +1,6 @@
 #ifndef DIRECTXMESH_H
 #define DIRECTXMESH_H
 
-#endif // DIRECTXMESH_H
-
 #include "common/interfaces.h"
 
 #include "windows.h"
@@ -28,3 +26,4 @@ protected:
   void ParseMesh(const MeshModel &m, std::vector<Vertex> &, std::vector<Face> &);
 };
 
+#endif // DIRECTXMESH_H

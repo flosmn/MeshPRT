@@ -1,3 +1,7 @@
+#ifndef MESH_H
+#define MESH_H
+
+#include "d3dUtil.h"
 #include "MeshDatastructures.h"
 
 class Mesh
@@ -76,3 +80,5 @@ protected:
   WCHAR* directory;
   WCHAR* name;
 };
+
+#endif // MESH_H

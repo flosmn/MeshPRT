@@ -1,14 +1,10 @@
-//=============================================================================
-// GfxStats.h by Frank Luna (C) 2005 All Rights Reserved.
-//
-// Class used for keeping track of and displaying the frames rendered
-// per second, milliseconds per frame, and vertex and triangle counts.
-//=============================================================================
-
-#ifndef GFX_STATS_H
-#define GFX_STATS_H
+#ifndef GFXSTATS_H
+#define GFXSTATS_H
 
 #include <d3dx9.h>
+
+#include "d3dUtil.h"
+#include "d3dApp.h"
 
 class GfxStats
 {
@@ -31,8 +27,7 @@ public:
 	void display();
 
 private:
-	// Prevent copying
-	GfxStats(const GfxStats& rhs);
+    GfxStats(const GfxStats& rhs);
 	GfxStats& operator=(const GfxStats& rhs);
 	
 private:
@@ -42,4 +37,5 @@ private:
 	DWORD mNumTris;
 	DWORD mNumVertices;
 };
-#endif // GFX_STATS_H
+
+#endif // GFXSTATS_H

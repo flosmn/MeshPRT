@@ -1,11 +1,10 @@
-#include <list>
-
 #include "d3dApp.h"
 #include "DirectInput.h"
 #include "GfxStats.h"
 #include "Camera.h"
 #include "PRTEngine.h"
-
+#include "CubeMap.h"
+#include "Light.h"
 
 class MeshPRT : public D3DApp
 {

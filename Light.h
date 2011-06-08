@@ -1,3 +1,6 @@
+#ifndef LIGHT_H
+#define LIGHT_H
+
 #include "d3dUtil.h"
 #include "LightSource.h"
 
@@ -18,3 +21,5 @@ protected:
   D3DXVECTOR3 mLightPosition;
   D3DXCOLOR mLightColor;
 };
+
+#endif // LIGHT_H

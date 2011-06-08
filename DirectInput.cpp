@@ -1,7 +1,4 @@
-#include "d3dUtil.h"
 #include "DirectInput.h"
-#include "d3dApp.h"
-#include "Window.h"
 
 DirectInput* gDInput = 0;
 

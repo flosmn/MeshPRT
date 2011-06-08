@@ -1,6 +1,4 @@
 #include "Camera.h"
-#include "DirectInput.h"
-#include "d3dUtil.h"
 
 Camera::Camera()
 {

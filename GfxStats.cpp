@@ -1,7 +1,4 @@
-#include "d3dUtil.h"
-#include "d3dApp.h"
 #include "GfxStats.h"
-#include <tchar.h>
 
 GfxStats::GfxStats()
 : mFont(0), mFPS(0.0f), mMilliSecPerFrame(0.0f), mNumTris(0), mNumVertices(0)

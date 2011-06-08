@@ -1,3 +1,6 @@
+#ifndef WINDOW_H
+#define WINDOW_H
+
 #ifndef UNICODE
 #define UNICODE
 #endif
@@ -6,7 +9,10 @@
 #endif
 
 #include <Windows.h>
+
 #include "d3dUtil.h"
+#include "d3dApp.h"
+#include "Mesh.h"
 
 DWORD WINAPI NewWindow(LPVOID lpParameter);
 
@@ -30,3 +36,4 @@ public:
   void OpenWindow(ID3DXMesh*);
 };
   
+#endif // WINDOW_H

@@ -1,5 +1,5 @@
-#ifndef FILTERMYFILTER_H
-#define FILTERMYFILTER_H
+#ifndef FILTER_MESHPRT_H
+#define FILTER_MESHPRT_H
 
 #include <QObject>
 
@@ -7,8 +7,6 @@
 
 #include "DirectXMesh.h"
 #include "Window.h"
-#include "stdio.h"
-#include "iostream"
 
 class QScriptEngine;
 
@@ -48,5 +46,4 @@ private:
                         //created out of the meshlab mesh
 };
 
-
-#endif
+#endif // FILTER_MESHPRT_H

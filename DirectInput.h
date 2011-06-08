@@ -1,5 +1,5 @@
-#ifndef DIRECT_INPUT_H
-#define DIRECT_INPUT_H
+#ifndef DIRECTINPUT_H
+#define DIRECTINPUT_H
 
 #define DIRECTINPUT_VERSION 0x0800
 
@@ -7,6 +7,9 @@
 #pragma comment(lib, "dxguid.lib")
 
 #include <dinput.h>
+
+#include "d3dUtil.h"
+#include "Window.h"
 
 class DirectInput
 {
@@ -37,4 +40,4 @@ private:
 };
 extern DirectInput* gDInput;
 
-#endif // DIRECT_INPUT_H
+#endif // DIRECTINPUT_H

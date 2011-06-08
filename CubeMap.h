@@ -1,5 +1,8 @@
+#ifndef CUBEMAP_H
+#define CUBEMAP_H
+
 #include "d3dUtil.h"
-#include "Light.h"
+#include "LightSource.h"
 
 class CubeMap : public LightSource
 {
@@ -31,3 +34,5 @@ protected:
   WCHAR* directory;
   WCHAR* name;
 };
+
+#endif // CUBEMAP_H

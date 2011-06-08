@@ -1,5 +1,4 @@
 #include "d3dApp.h"
-#include "Window.h"
 
 D3DApp* gd3dApp              = 0;
 IDirect3DDevice9* gd3dDevice = 0;

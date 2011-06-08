@@ -1,6 +1,9 @@
+#ifndef PRTENGINE_H
+#define PRTENGINE_H
+
 #include "d3dUtil.h"
 #include "Mesh.h"
-#include "CubeMap.h"
+#include "LightSource.h"
 
 class PRTEngine {
 public:
@@ -25,3 +28,5 @@ protected:
   DWORD mNumChannels;
   DWORD mNumPCA;
 };
+
+#endif // PRTENGINE_H

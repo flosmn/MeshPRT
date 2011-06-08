@@ -1,6 +1,4 @@
 #include "Window.h"
-#include "d3dApp.h"
-#include "Mesh.h"
 
 HINSTANCE globalInstance;
 HWND globalWindowHandle;

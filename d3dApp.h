@@ -2,8 +2,7 @@
 #define D3DAPP_H
 
 #include "d3dUtil.h"
-#include <tchar.h>
-#include <string>
+#include "Window.h"
 
 bool StartDirectX(ID3DXMesh* mesh);
 

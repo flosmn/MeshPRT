@@ -1,4 +1,5 @@
-
+#ifndef LIGHTSOURCE_H
+#define LIGHTSOURCE_H
 
 class LightSource {
 public:
@@ -11,3 +12,5 @@ protected:
   float mSHCoeffsGreen[D3DXSH_MAXORDER*D3DXSH_MAXORDER];
   float mSHCoeffsBlue[D3DXSH_MAXORDER*D3DXSH_MAXORDER];
 };
+
+#endif // LIGHTSOURCE_H
