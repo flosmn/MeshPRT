@@ -41,11 +41,8 @@ private:
   GfxStats* mGfxStats;
 
   ID3DXEffect* mFX;
-  D3DXHANDLE   mhPerVertexLightingTechnique;
-  D3DXHANDLE   mhPerPixelLightingTechniqueWithTexture;
-  D3DXHANDLE   mhPerPixelLightingTechniqueWithoutTexture;
-  D3DXHANDLE   mhPRTLightingTechniqueWithTexture;
-  D3DXHANDLE   mhPRTLightingTechniqueWithoutTexture;
+  D3DXHANDLE   mhPerPixelLighting; 
+  D3DXHANDLE   mhPRTLighting;  
   D3DXHANDLE   mhView;
   D3DXHANDLE   mhProjection;
   D3DXHANDLE   mhEyePosW;
@@ -110,6 +107,7 @@ MeshPRT::~MeshPRT()
   delete mPRTEngine;
   delete mLight;
   delete mCamera;
+  delete mCubeMap;
 }
 
 bool MeshPRT::checkDeviceCaps()
@@ -149,14 +147,13 @@ bool MeshPRT::IsInitialized() {
 }
 
 HRESULT MeshPRT::Init(ID3DXMesh* mesh) {
-  phongShading = false;
-  environmentLighting = true;
-  reflectivity = 0.5f;
-
   HRESULT hr;
 
+  phongShading = false;
+  environmentLighting = false;
+  reflectivity = 0.5f;
   DWORD order = 6;
-
+  
   mMesh = new Mesh(gd3dDevice);
 
   if(mesh == NULL){
@@ -168,7 +165,7 @@ HRESULT MeshPRT::Init(ID3DXMesh* mesh) {
   }
   PD(hr, L"load mesh");
   if(FAILED(hr)) return hr;
-
+  
   mCubeMap = new CubeMap(gd3dDevice);
   hr = mCubeMap->LoadCubeMap(L"cubemaps/", L"stpeters_cross", L".dds");
   PD(hr, L"load cube map");
@@ -177,7 +174,7 @@ HRESULT MeshPRT::Init(ID3DXMesh* mesh) {
   hr = mCubeMap->CalculateSHCoefficients(order);
   PD(hr, L"calculate SHCoefficients of cube map light");
   if(FAILED(hr)) return hr;
-
+  
   mLight = new Light( D3DXVECTOR3(0.0f, 5.0f, -5.0f),
                       D3DXVECTOR3(-1.0f, -1.0f, 1.0f),
                       D3DXCOLOR(1.0f, 1.0f, 1.0f, 1.0f) );
@@ -213,7 +210,6 @@ void MeshPRT::updateScene(float dt)
   mGfxStats->setVertexCount(mMesh->GetNumVertices());
   mGfxStats->setTriCount(mMesh->GetNumFaces());
   mGfxStats->update(dt);
-
 
   mCamera->update(dt);
 
@@ -266,7 +262,9 @@ HRESULT MeshPRT::UpdateLighting(){
   PD(hr, L"convolute sh coefficients");
   if(FAILED(hr)) return hr;
 
-  mMesh->SetPRTConstantsInEffect();
+  hr = mMesh->SetPRTConstantsInEffect();
+  PD(hr, L"set prt constants in effect");
+  if(FAILED(hr)) return hr;
 
   return D3D_OK;
 }
@@ -283,12 +281,18 @@ void MeshPRT::drawScene()
   if(environmentLighting) {
     D3DXMATRIX mWVP = mCamera->view() * mProj;
     mCubeMap->DrawCubeMap(&mWVP);
+    mFX->SetTexture( "EnvMap", mCubeMap->GetTexture() );
+    mFX->SetFloat( "gReflectivity", reflectivity );
+  }
+  else {
+    mFX->SetFloat( "gReflectivity", 0.0f );
   }
   
+  mFX->SetBool("environmentLighting", environmentLighting);
+  mFX->SetBool("useTextures", mMesh->HasTextures());
+  
   SetTechnique();
-
-  mFX->SetTexture( "EnvMap", mCubeMap->GetTexture() );
-  mFX->SetFloat( "gReflectivity", reflectivity );
+    
   mFX->SetValue(mhEyePosW, &(mCamera->pos()), sizeof(D3DXVECTOR3));
   mFX->SetMatrix(mhView, &(mCamera->view()));  
   mFX->SetMatrix(mhProjection, &mProj);
@@ -307,34 +311,24 @@ void MeshPRT::drawScene()
     mFX->EndPass();
   }
   mFX->End();
-
-
+  
   mGfxStats->display();
 
   gd3dDevice->EndScene();
-
-  // Present the backbuffer.
+    
   gd3dDevice->Present(0, 0, 0, 0);
 }
 
 void MeshPRT::SetTechnique() {
-  if( mMesh->HasTextures() )
-  {
-    if(phongShading) {
-      mFX->SetTechnique(mhPerPixelLightingTechniqueWithTexture);
-    }
-    else {
-      mFX->SetTechnique(mhPRTLightingTechniqueWithTexture);
-    }    
+  HRESULT hr;
+
+  if(phongShading) {
+    hr = mFX->SetTechnique(mhPerPixelLighting);
+    // PD(hr, L"set technique to per pixel lighting");
   }
-  else
-  {
-    if(phongShading) {
-      mFX->SetTechnique(mhPerPixelLightingTechniqueWithoutTexture);
-    }
-    else {
-      mFX->SetTechnique(mhPRTLightingTechniqueWithoutTexture);
-    }    
+  else {
+    hr = mFX->SetTechnique(mhPRTLighting);
+    // PD(hr, L"set technique to PRT lighting");
   }
 }
 
@@ -367,12 +361,8 @@ void MeshPRT::buildFX(Mesh* mesh)
   PD( LoadEffectFile(gd3dDevice, effectName, aDefines, D3DXSHADER_DEBUG, &mFX),
       Concat(L"load effect file ", effectName) );
 
-  // Obtain handles.
-  mhPerVertexLightingTechnique = mFX->GetTechniqueByName("PerVertexLighting");
-  mhPerPixelLightingTechniqueWithTexture = mFX->GetTechniqueByName("PerPixelLightingWithTexture");
-  mhPerPixelLightingTechniqueWithoutTexture = mFX->GetTechniqueByName("PerPixelLightingWithoutTexture");
-  mhPRTLightingTechniqueWithTexture  = mFX->GetTechniqueByName("PRTLightingWithTexture");
-  mhPRTLightingTechniqueWithoutTexture  = mFX->GetTechniqueByName("PRTLightingWithoutTexture");
+  mhPerPixelLighting      = mFX->GetTechniqueByName("PerPixelLighting");  
+  mhPRTLighting           = mFX->GetTechniqueByName("PRTLighting");
   mhView                  = mFX->GetParameterByName(0, "gView");
   mhProjection            = mFX->GetParameterByName(0, "gProjection");
   mhLightVecW             = mFX->GetParameterByName(0, "gLightVecW");
