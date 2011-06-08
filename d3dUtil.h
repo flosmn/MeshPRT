@@ -18,6 +18,7 @@
 #include <vector>
 #include <stdio.h>
 #include <iostream>
+#include <fstream>
 
 #include "localConfig.h"
 

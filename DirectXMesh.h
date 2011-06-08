@@ -24,6 +24,7 @@ protected:
 
   void CreateDevice();
   void ParseMesh(const MeshModel &m, std::vector<Vertex> &, std::vector<Face> &);
+  void WriteToFile(std::vector<Vertex> &, std::vector<Face> &);
 };
 
 #endif // DIRECTXMESH_H

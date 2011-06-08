@@ -93,7 +93,9 @@ HRESULT DirectXMesh::CreateDirectXMesh(const MeshModel &m) {
 
   std::vector<Vertex> vertices;
   std::vector<Face> faces;
+
   ParseMesh(m, vertices, faces);
+  WriteToFile(vertices, faces);
 
   DWORD numFaces = faces.size();
   DWORD numVertices = vertices.size();
@@ -159,6 +161,7 @@ HRESULT DirectXMesh::CreateDirectXMesh(const MeshModel &m) {
   delete [] pAdjacency;
 
   return D3D_OK;
+
 }
 
 HRESULT DirectXMesh::SaveMeshToFile(const WCHAR* filename) {
@@ -188,6 +191,9 @@ HRESULT DirectXMesh::SaveMeshToFile(const WCHAR* filename) {
     materials[i].pTextureFilename = NULL;
   }
 
+  PD(L"save mesh with #vertices: ", mMesh->GetNumVertices());
+  PD(L"save mesh with #faces: ", mMesh->GetNumFaces());
+
   hr = D3DXSaveMeshToX(filename, mMesh, pAdjacency, materials, NULL,
                        dwNumMeshes, dwFormat);
 
@@ -210,5 +216,45 @@ HRESULT DirectXMesh::CloneMesh(ID3DXMesh** target) {
   PD(hr, L"clone mesh");
 
   return hr;
+}
+
+void DirectXMesh::WriteToFile(std::vector<Vertex> &vertices,
+                              std::vector<Face> &faces)
+{
+  PD(D3D_OK, L"write to file");
+
+  std::ofstream testfile;
+  testfile.open("../meshlabplugins/filter_meshprt/export/testfile");
+  testfile << "Test";
+  testfile.close();
+
+  std::ofstream outfile;
+  outfile.open("../meshlabplugins/filter_meshprt/export/meshdump");
+
+  DWORD nrOfVertices = vertices.size();
+  DWORD nrOfFaces = faces.size();
+
+  outfile << nrOfVertices << "\n";
+
+  for(int i = 0; i < nrOfVertices; ++i) {
+    Vertex vertex = vertices[i];
+    float x = vertex.x;
+    float y = vertex.y;
+    float z = vertex.z;
+    outfile << "vertex " << i << ": " << x << ", " << y << ", " << z << "\n";
+  }
+
+  outfile << "\n";
+  outfile << nrOfFaces << "\n";
+
+  for(int i = 0; i < nrOfFaces; ++i) {
+    Face face = faces[i];
+    DWORD i0 = face.vertices[0];
+    DWORD i1 = face.vertices[1];
+    DWORD i2 = face.vertices[2];
+    outfile << "face " << i << ": " << i0 << ", " << i1 << ", " << i2 << "\n";
+  }
+
+  outfile.close();
 }
 

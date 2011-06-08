@@ -20,8 +20,6 @@ HINSTANCE GlobalInstance();
 HWND GlobalWindowHandle();
 void SetGlobalInstance(HINSTANCE hInst);
 void SetGlobalWindowHandle(HWND handle);
-
-
 void RegClass();
 void InitMainWindow();
 

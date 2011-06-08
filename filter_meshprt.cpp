@@ -12,10 +12,13 @@ MyPlugin::MyPlugin() {
   foreach(FilterIDType tt , types())
     actionList << new QAction(filterName(tt), this);
 
-  //window = new Window();
+  window = new Window();
+  mesh = new DirectXMesh();
 }
 
 MyPlugin::~MyPlugin() {
+  delete window;
+  delete mesh;
 }
 
 // ST() must return the very short string describing each filtering action 
@@ -110,20 +113,14 @@ bool MyPlugin::applyFilter(QAction */*filter*/, MeshDocument &md,
                            RichParameterSet & par, vcg::CallBackPos *cb) {
 
   MeshModel &m=*(md.mm());
-  vcg::tri::UpdateNormals<CMeshO>::PerVertexNormalized(m.cm);
-  colorizeWithNormals(m);
 
-  Log("Coloring successfull",m.cm.vn);
-  vcg::tri::UpdateBounding<CMeshO>::Box(m.cm);
-
-  DirectXMesh *mesh = new DirectXMesh();
   mesh->CreateDirectXMesh(m);
-  mesh->CloneMesh(&mMesh);
 
-  WCHAR* path = L"models/meshlab.x";
-  mesh->SaveMeshToFile(AppendToRootDir(path));
+  //WCHAR* path = L"models/meshlab.x";
+  //mesh->SaveMeshToFile(AppendToRootDir(path));
 
-  window->OpenWindow(mMesh);
+  //mesh->CloneMesh(&mMesh);
+  //window->OpenWindow(mMesh);
 
   return true;
 }

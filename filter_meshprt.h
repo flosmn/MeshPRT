@@ -41,9 +41,7 @@ public:
     }
 private:
     Window* window; // window for directX
-
-    ID3DXMesh *mMesh; // the mesh for directX which is
-                        //created out of the meshlab mesh
+    DirectXMesh *mesh;
 };
 
 #endif // FILTER_MESHPRT_H
