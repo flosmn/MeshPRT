@@ -25,6 +25,9 @@ public:
   void buildFX(Mesh* mesh);
   void buildViewMtx();
   void buildProjMtx();
+
+  void LoadEffectFile_InShader(Mesh* mesh);
+  void LoadEffectFile_AllCpu(Mesh* mesh);
   
 private:
   HRESULT Init(ID3DXMesh* mesh);
@@ -33,6 +36,7 @@ private:
 
   bool phongShading;
   bool environmentLighting;
+  bool allCpu;
 
   bool initialized;
 
@@ -150,8 +154,10 @@ HRESULT MeshPRT::Init(ID3DXMesh* mesh) {
   HRESULT hr;
 
   phongShading = false;
-  environmentLighting = false;
-  reflectivity = 0.5f;
+  environmentLighting = true;
+  allCpu = true;
+
+  reflectivity = 0.0f;
   DWORD order = 6;
   
   mMesh = new Mesh(gd3dDevice);
@@ -251,7 +257,7 @@ void MeshPRT::updateScene(float dt)
 
 HRESULT MeshPRT::UpdateLighting(){
   HRESULT hr;
-    
+
   if(environmentLighting) {
     hr = mPRTEngine->ConvoluteSHCoefficients(mMesh, mCubeMap);
   }
@@ -262,9 +268,16 @@ HRESULT MeshPRT::UpdateLighting(){
   PD(hr, L"convolute sh coefficients");
   if(FAILED(hr)) return hr;
 
-  hr = mMesh->SetPRTConstantsInEffect();
-  PD(hr, L"set prt constants in effect");
-  if(FAILED(hr)) return hr;
+  if(allCpu) {
+    hr = mPRTEngine->CalculateDiffuseColor(mMesh);
+    PD(hr, L"calculate diffuse color of mesh");
+    if(FAILED(hr)) return hr;
+  }
+  else {
+    hr = mMesh->SetPRTConstantsInEffect();
+    PD(hr, L"set prt constants in effect");
+    if(FAILED(hr)) return hr;
+  }
 
   return D3D_OK;
 }
@@ -334,32 +347,12 @@ void MeshPRT::SetTechnique() {
 
 void MeshPRT::buildFX(Mesh* mesh)
 {
-  UINT dwNumChannels = mesh->GetPRTCompBuffer()->GetNumChannels();
-  UINT dwNumClusters = mesh->GetPRTCompBuffer()->GetNumClusters();
-  UINT dwNumPCA = mesh->GetPRTCompBuffer()->GetNumPCA();
-
-  // The number of vertex consts need by the shader can't exceed the 
-  // amount the HW can support
-  DWORD dwNumVConsts = dwNumClusters * ( 1 + dwNumChannels * dwNumPCA / 4 ) + 4;
-  
-  D3DXMACRO aDefines[3];
-  CHAR szMaxNumClusters[64];
-
-  sprintf( szMaxNumClusters, "%d", dwNumClusters );
-  szMaxNumClusters[63] = 0;
-  CHAR szMaxNumPCA[64];
-  sprintf( szMaxNumPCA, "%d", dwNumPCA );
-  szMaxNumPCA[63] = 0;
-  aDefines[0].Name = "NUM_CLUSTERS";
-  aDefines[0].Definition = szMaxNumClusters;
-  aDefines[1].Name = "NUM_PCA";
-  aDefines[1].Definition = szMaxNumPCA;
-  aDefines[2].Name = NULL;
-  aDefines[2].Definition = NULL;
-  
-  WCHAR* effectName = L"shader/diffuse.fx";
-  PD( LoadEffectFile(gd3dDevice, effectName, aDefines, D3DXSHADER_DEBUG, &mFX),
-      Concat(L"load effect file ", effectName) );
+  if(allCpu) {
+    LoadEffectFile_AllCpu(mesh);
+  }
+  else {
+    LoadEffectFile_InShader(mesh);
+  }
 
   mhPerPixelLighting      = mFX->GetTechniqueByName("PerPixelLighting");  
   mhPRTLighting           = mFX->GetTechniqueByName("PRTLighting");
@@ -380,3 +373,35 @@ void MeshPRT::buildProjMtx()
   float h = (float)md3dPP.BackBufferHeight;
   D3DXMatrixPerspectiveFovLH(&mProj, D3DX_PI * 0.25f, w/h, 1.0f, 5000.0f);
 }
+
+void MeshPRT::LoadEffectFile_InShader(Mesh* mesh){
+  UINT dwNumChannels = mesh->GetPRTCompBuffer()->GetNumChannels();
+  UINT dwNumClusters = mesh->GetPRTCompBuffer()->GetNumClusters();
+  UINT dwNumPCA = mesh->GetPRTCompBuffer()->GetNumPCA();
+
+  D3DXMACRO aDefines[3];
+  CHAR szMaxNumClusters[64];
+
+  sprintf( szMaxNumClusters, "%d", dwNumClusters );
+  szMaxNumClusters[63] = 0;
+  CHAR szMaxNumPCA[64];
+  sprintf( szMaxNumPCA, "%d", dwNumPCA );
+  szMaxNumPCA[63] = 0;
+  aDefines[0].Name = "NUM_CLUSTERS";
+  aDefines[0].Definition = szMaxNumClusters;
+  aDefines[1].Name = "NUM_PCA";
+  aDefines[1].Definition = szMaxNumPCA;
+  aDefines[2].Name = NULL;
+  aDefines[2].Definition = NULL;
+  
+  WCHAR* effectName = L"shader/diffuse.fx";
+  PD( LoadEffectFile(gd3dDevice, effectName, aDefines, D3DXSHADER_DEBUG, &mFX),
+      Concat(L"load effect file ", effectName) );
+}
+
+void MeshPRT::LoadEffectFile_AllCpu(Mesh* mesh){ 
+  WCHAR* effectName = L"shader/diffuse_cpu.fx";
+  PD( LoadEffectFile(gd3dDevice, effectName, 0, D3DXSHADER_DEBUG, &mFX),
+      Concat(L"load effect file ", effectName) );
+}
+

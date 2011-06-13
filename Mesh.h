@@ -25,7 +25,8 @@ public:
   void SetPRTCompBuffer(ID3DXPRTCompBuffer* compBuffer) { mPRTCompBuffer = compBuffer; }
   ID3DXPRTCompBuffer* GetPRTCompBuffer() { return mPRTCompBuffer; }
   
-  void SetPRTConstants(float* prtConstants) { mPRTConstants = prtConstants; }
+  void SetPRTConstants(float* prtConstants);
+  float* GetPRTConstants() { return mPRTConstants; }
   
   HRESULT SetPRTConstantsInEffect();
 

@@ -1,8 +1,6 @@
 #ifndef MESHDATASTRUCTURES_H
 #define MESHDATASTRUCTURES_H
 
-#include "d3dUtil.h"
-
 struct Vertex {
   float x;
   float y;

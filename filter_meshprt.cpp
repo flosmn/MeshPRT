@@ -1,5 +1,8 @@
 #include "filter_meshprt.h"
 #include <QtScript>
+#include <QFile>
+#include <QCoreApplication>
+#include <QTextStream>
 
 // Constructor usually performs only two simple tasks of filling the two lists 
 //  - typeList: with all the possible id of the filtering actions
@@ -74,47 +77,19 @@ void MyPlugin::initParameterSet(QAction *action,MeshModel &m,
   }
 }
 
-void colorizeWithNormals(MeshModel &m) {
-  for(unsigned int i = 0; i< m.cm.vert.size(); i++) {
-    vcg::Point3f normal = m.cm.vert[i].N();
-
-    float r = (normal.X()+1) * 127.5f;
-    float g = (normal.Y()+1) * 127.5f;
-    float b = (normal.Z()+1) * 127.5f;
-
-    m.cm.vert[i].C()[0] = r;
-    m.cm.vert[i].C()[1] = g;
-    m.cm.vert[i].C()[2] = b;
-  }
-}
-
-void colorizeWithThreeColors(MeshModel &m) {
-  for(unsigned int i = 0; i< m.cm.vert.size(); i++) {
-    if(i%3==0) {
-      m.cm.vert[i].C()[0] = 255;
-      m.cm.vert[i].C()[1] = 0;
-      m.cm.vert[i].C()[2] = 0;
-    }
-    else if(i%3==1) {
-      m.cm.vert[i].C()[0] = 0;
-      m.cm.vert[i].C()[1] = 255;
-      m.cm.vert[i].C()[2] = 0;
-    }
-    else {
-      m.cm.vert[i].C()[0] = 0;
-      m.cm.vert[i].C()[1] = 0;
-      m.cm.vert[i].C()[2] = 255;
-    }
-  }
-}
-
 // The Real Core Function doing the actual mesh processing.
 bool MyPlugin::applyFilter(QAction */*filter*/, MeshDocument &md,
                            RichParameterSet & par, vcg::CallBackPos *cb) {
 
-  MeshModel &m=*(md.mm());
+  QFile file("testfile");
+  file.open(QIODevice::WriteOnly | QIODevice::Text);
+  QTextStream out(&file);
+  out << "hallo";
+  file.close();
 
-  mesh->CreateDirectXMesh(m);
+  //MeshModel &m=*(md.mm());
+
+  //mesh->CreateDirectXMesh(m);
 
   //WCHAR* path = L"models/meshlab.x";
   //mesh->SaveMeshToFile(AppendToRootDir(path));

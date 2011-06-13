@@ -8,6 +8,7 @@ Mesh::Mesh(IDirect3DDevice9 *device)
 {
   mMaterialBuffer = 0;
   mNumMaterials = 0;
+  mPRTConstants = 0;
   hasTextures = false;
   mMesh = 0;  
   mRotationX = 0;
@@ -28,6 +29,21 @@ Mesh::Mesh(IDirect3DDevice9 *device)
 
   mSpecularMtrl = D3DXCOLOR(1.0f, 1.0f, 1.0f, 1.0f);
   mSpecularPower = 8.0f;
+}
+
+HRESULT Mesh::SetPRTConstantsInEffect() 
+{
+  HRESULT hr;
+
+  DWORD numClusters = mPRTCompBuffer->GetNumClusters();
+  DWORD numChannels = mPRTCompBuffer->GetNumChannels();
+  DWORD numPCA = mPRTCompBuffer->GetNumPCA();
+
+  UINT size = numClusters * ( 4 + numChannels * numPCA );
+  hr =  mEffect->SetFloatArray( "aPRTConstants", mPRTConstants, size );
+  
+  PD( hr, L"set float array" );
+  return hr;
 }
 
 D3DXCOLOR Mesh::GetDiffuseMaterial(int i) 
@@ -94,6 +110,13 @@ void Mesh::DrawMesh()
   }
 }
 
+void Mesh::SetPRTConstants(float* prtConstants) { 
+  if(mPRTConstants != 0){
+    delete [] mPRTConstants;
+  }
+  mPRTConstants = prtConstants;
+}
+
 DWORD Mesh::GetNumFaces() 
 {
   return mMesh->GetNumFaces();
@@ -126,7 +149,7 @@ HRESULT Mesh::AdjustMeshDecl()
     {0, 116, D3DDECLTYPE_FLOAT4, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_BLENDWEIGHT, 6},
     D3DDECL_END()
   };
-
+  
   hr = pInMesh->CloneMesh( pInMesh->GetOptions(), vertDecl, mDevice, &pOutMesh );
   PD( hr, L"clone mesh" );
   if( FAILED(hr) ) return hr;
@@ -186,23 +209,6 @@ HRESULT Mesh::AttribSortMesh()
   delete []rgdwAdjacencyOut;
   
   return D3D_OK;
-}
-
-HRESULT Mesh::SetPRTConstantsInEffect() 
-{
-  HRESULT hr;
-
-  DWORD mNumChannels = 3;
-  DWORD mOrder = 5;
-  DWORD dwNumPCA = mNumChannels * mOrder * mOrder;
-  if(dwNumPCA > 24) dwNumPCA = 24;
-  UINT dwNumClusters = mPRTCompBuffer->GetNumClusters();
-  
-  UINT size = dwNumClusters * ( 4 + mNumChannels * dwNumPCA );
-  hr =  mEffect->SetFloatArray( "aPRTConstants", mPRTConstants, size );
-  
-  PD( hr, L"set float array" );
-  return hr;
 }
 
 HRESULT Mesh::LoadMesh(WCHAR* directory, WCHAR* name, WCHAR* extension)

@@ -12,10 +12,19 @@ public:
 
   HRESULT CalculateSHCoefficients(Mesh*);
   HRESULT ConvoluteSHCoefficients(Mesh* mesh, LightSource* lightSource);
-  const D3DXSHMATERIAL** getMeshMaterial(Mesh *mesh);
-  void ComputeShaderConstants( float* pSHCoeffsRed, float* pSHCoeffsGreen, float* pSHCoeffsBlue, Mesh* mesh );
-  DWORD getOrder() { return mOrder; }
+  HRESULT CalculateDiffuseColor(Mesh* mesh);
   
+  const D3DXSHMATERIAL** getMeshMaterial(Mesh *mesh);
+  
+  void ComputeShaderConstants( float* pSHCoeffsRed, float* pSHCoeffsGreen, 
+                               float* pSHCoeffsBlue, Mesh* mesh );
+  
+  
+  D3DXCOLOR GetPrecomputedDiffuseColor( int iClusterOffset, float *vPCAWeights, 
+                                        DWORD numPCA, float *PRTConstants);
+  
+  DWORD getOrder() { return mOrder; }
+
 protected:
   void ExtractCompressedDataForPRTShader(Mesh *mesh);
 

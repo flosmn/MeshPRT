@@ -1,4 +1,6 @@
 #include "Window.h"
+#include "ObjFileParser.h"
+#include "XFileCreator.h"
 
 HINSTANCE globalInstance;
 HWND globalWindowHandle;
@@ -24,10 +26,23 @@ void Window::OpenWindow(ID3DXMesh* mesh) {
 int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE prevInstance,
                     PSTR cmdLine, int showCmd)
 {
+  
   Window* window = new Window();
   SetGlobalInstance(hInstance);
   InitMainWindow();
   StartDirectX(NULL);
+  /*  
+  std::vector<Vertex> vertices;
+  std::vector<Face> faces;
+  ObjFileParser *parser = new ObjFileParser();
+  XFileCreator *creator = new XFileCreator();
+  parser->ParseFile(AppendToRootDir(L"obj/bimba_d.obj"), vertices, faces);
+  creator->CreateXFile(AppendToRootDir(L"obj/bimba_d_scaled_10.x"), vertices, faces);
+  
+  delete parser;
+  delete creator;
+  */
+  return 0;
 }
 
 DWORD WINAPI NewWindow(LPVOID lpParameter) {

@@ -54,6 +54,12 @@
     <ClInclude Include="..\..\LightSource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\ObjFileParser.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\XFileCreator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\Camera.cpp">
@@ -89,12 +95,21 @@
     <ClCompile Include="..\..\CubeMap.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\ObjFileParser.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\XFileCreator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\shader\diffuse.fx">
       <Filter>Resource Files</Filter>
     </None>
     <None Include="..\..\shader\cubemap.fx">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="..\..\shader\diffuse_cpu.fx">
       <Filter>Resource Files</Filter>
     </None>
   </ItemGroup>

@@ -1,5 +1,18 @@
 #include "PRTEngine.h"
 
+struct LOCAL_VERTEX {
+    D3DXVECTOR3 position;
+    D3DXVECTOR3 normal;
+    D3DXVECTOR2 texCoords;
+    float clusterID;
+    D3DXCOLOR blendWeight1;
+    D3DXCOLOR blendWeight2;
+    D3DXCOLOR blendWeight3;
+    D3DXCOLOR blendWeight4;
+    D3DXCOLOR blendWeight5;
+    D3DXCOLOR blendWeight6;
+  };
+
 PRTEngine::PRTEngine(IDirect3DDevice9* device, DWORD order) {
   mDevice = device;
   mOrder = order;
@@ -50,7 +63,19 @@ HRESULT PRTEngine::CalculateSHCoefficients(Mesh* mesh) {
   PD(mPRTEngine->ComputeDirectLightingSH( mOrder, pDataTotal ), L"compute direct lighting SH");
     
   pBufferA->AddBuffer( pDataTotal );
-  PD(mPRTEngine->ComputeBounce( pBufferA, pBufferB, pDataTotal ), L"first boundce");
+  
+  hr = mPRTEngine->ComputeBounce( pBufferA, pBufferB, pDataTotal );
+  PD(hr, L"compute first bounce");
+  if(FAILED(hr)) return hr;
+
+  ID3DXPRTBuffer* pPRTBufferTemp = NULL;
+  pPRTBufferTemp = pBufferA;
+  pBufferA = pBufferB;
+  pBufferB = pPRTBufferTemp;
+  
+  hr = mPRTEngine->ComputeBounce( pBufferA, pBufferB, pDataTotal );
+  PD(hr, L"compute second bounce");
+  if(FAILED(hr)) return hr;
     
   WCHAR* bufferfile = Concat(mesh->GetName(), L".compbuffer");
   WCHAR* bufferpath = Concat(mesh->GetDirectory(), bufferfile);
@@ -62,7 +87,6 @@ HRESULT PRTEngine::CalculateSHCoefficients(Mesh* mesh) {
   
   hr = D3DXSavePRTCompBufferToFile( AppendToRootDir(bufferpath), compPRTBuffer );
   PD(hr, L"save compressed prt buffer to file");
-  PD(hr);
   if(FAILED(hr)) return hr;
   
   mesh->SetPRTCompBuffer(compPRTBuffer);
@@ -103,6 +127,78 @@ HRESULT PRTEngine::CalculateSHCoefficients(Mesh* mesh) {
   return D3D_OK;
 }
 
+HRESULT PRTEngine::CalculateDiffuseColor(Mesh* mesh) {
+  HRESULT hr;
+
+  /* 
+  we override the first blendweight color in the mesh with the diffuse
+  color used for rendering. so when we calculate the diffuse color again we
+  have to make sure that the PCAWeights are stored in the blendweight region
+  of the mesh vertices again. therefore we extract the PCAWeights again.
+  */
+  ID3DXPRTCompBuffer* compPRTBuffer = mesh->GetPRTCompBuffer();
+  hr = compPRTBuffer->ExtractToMesh( mNumPCA, D3DDECLUSAGE_BLENDWEIGHT, 
+                                             1, mesh->GetMesh() );
+  
+  PD(hr, L"extract to mesh" );
+  if(FAILED(hr)) return hr;
+       
+  LOCAL_VERTEX* pVertexBuffer = NULL;
+  hr = mesh->GetMesh()->LockVertexBuffer( 0, ( void** )&pVertexBuffer );
+  PD(hr, L"lock vertex buffer");
+  if(FAILED(hr)) return hr;
+
+  for( UINT i = 0; i < mesh->GetNumVertices(); i++ )
+  {
+    int clusterID = pVertexBuffer[i].clusterID;
+    float* pPCAWeights = pVertexBuffer[i].blendWeight1;
+  
+    D3DXCOLOR diffuseColor = GetPrecomputedDiffuseColor(clusterID, 
+                                                        pPCAWeights,
+                                                        mNumPCA,
+                                                        mesh->GetPRTConstants());
+    
+    pVertexBuffer[i].blendWeight1 = diffuseColor;
+  }
+  hr = mesh->GetMesh()->UnlockVertexBuffer();
+  PD(hr, L"unlock vertex buffer");
+  if(FAILED(hr)) return hr;
+
+  return D3D_OK;
+}
+
+D3DXCOLOR PRTEngine::GetPrecomputedDiffuseColor( int clusterID, 
+                                                 float *vPCAWeights, 
+                                                 DWORD numPCA, 
+                                                 float *PRTConstants)
+{         
+    float vAccumR = 0.0f;
+    float vAccumG = 0.0f;
+    float vAccumB = 0.0f;
+    
+    for (DWORD j = 0; j < numPCA; j++) 
+    {
+        int redRegionOffset = clusterID+4+numPCA*0;
+        int greenRegionOffset = clusterID+4+numPCA*1;
+        int blueRegionOffset = clusterID+4+numPCA*2;
+        vAccumR += vPCAWeights[j] * PRTConstants[redRegionOffset+j];
+        vAccumG += vPCAWeights[j] * PRTConstants[greenRegionOffset+j];
+        vAccumB += vPCAWeights[j] * PRTConstants[blueRegionOffset+j];
+    }    
+
+    D3DXCOLOR vDiffuse;
+    vDiffuse.r = PRTConstants[clusterID+0];
+    vDiffuse.g = PRTConstants[clusterID+1];
+    vDiffuse.b = PRTConstants[clusterID+2];
+    vDiffuse.a = PRTConstants[clusterID+3];
+
+    vDiffuse.r += vAccumR;
+    vDiffuse.g += vAccumG;
+    vDiffuse.b += vAccumB;
+    
+    return vDiffuse;
+}
+
 HRESULT PRTEngine::ConvoluteSHCoefficients(Mesh* mesh, LightSource* lightSource) {
   HRESULT hr; 
 
@@ -113,6 +209,7 @@ HRESULT PRTEngine::ConvoluteSHCoefficients(Mesh* mesh, LightSource* lightSource)
   int nBufferSize = nClusterBasisSize * numClusters;
 
   float* PRTClusterBases = new float[nBufferSize];
+
   float* PRTConstants = new float[numClusters * ( 4 + mNumChannels * mNumPCA )];
 
   for( DWORD iCluster = 0; iCluster < numClusters; iCluster++ ) {
@@ -140,6 +237,8 @@ HRESULT PRTEngine::ConvoluteSHCoefficients(Mesh* mesh, LightSource* lightSource)
       pPCAStart[2 * mNumPCA + iPCA] = D3DXSHDot( mOrder, &PRTClusterBases[nOffset + 2 * numCoeffs], lightSource->GetSHCoeffsBlue() );
     }
   }
+
+  delete [] PRTClusterBases;
 
   mesh->SetPRTConstants(PRTConstants);
   

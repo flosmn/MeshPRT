@@ -97,6 +97,10 @@ HRESULT DirectXMesh::CreateDirectXMesh(const MeshModel &m) {
   ParseMesh(m, vertices, faces);
   WriteToFile(vertices, faces);
 
+  return D3D_OK;
+
+  /*
+
   DWORD numFaces = faces.size();
   DWORD numVertices = vertices.size();
 
@@ -161,7 +165,7 @@ HRESULT DirectXMesh::CreateDirectXMesh(const MeshModel &m) {
   delete [] pAdjacency;
 
   return D3D_OK;
-
+  */
 }
 
 HRESULT DirectXMesh::SaveMeshToFile(const WCHAR* filename) {
@@ -225,6 +229,11 @@ void DirectXMesh::WriteToFile(std::vector<Vertex> &vertices,
 
   std::ofstream testfile;
   testfile.open("../meshlabplugins/filter_meshprt/export/testfile");
+
+  if(!testfile.is_open()) {
+    PD(D3D_OK, L"return!!");
+    return;
+  }
   testfile << "Test";
   testfile.close();
 

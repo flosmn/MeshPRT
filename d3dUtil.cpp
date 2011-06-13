@@ -15,10 +15,18 @@ void PD(HRESULT result, const WCHAR* str)  {
   else if(result == DIERR_OUTOFMEMORY) OutputDebugString(L"DIERR_OUTOFMEMORY");
   else if(result == DIERR_NOTINITIALIZED) OutputDebugString(L"DIERR_NOTINITIALIZED");
   else if(result == DIERR_OTHERAPPHASPRIO) OutputDebugString(L"DIERR_OTHERAPPHASPRIO");
+  else if(result == D3DERR_NOTFOUND) OutputDebugString(L"D3DERR_NOTFOUND");
   else OutputDebugString(L"unknown HRESULT");
   OutputDebugString(L"   (");
   OutputDebugString(str);
   OutputDebugString(L")\n");
+
+  
+}
+
+void PD(const WCHAR* wchar) {
+  OutputDebugString(wchar);
+  OutputDebugString(L"\n");
 }
 
 void PD(HRESULT result, const char* str) {
