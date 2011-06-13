@@ -28,8 +28,6 @@ public:
   void SetPRTConstants(float* prtConstants);
   float* GetPRTConstants() { return mPRTConstants; }
   
-  HRESULT SetPRTConstantsInEffect();
-
   D3DXCOLOR GetDiffuseMaterial(int i);
 
   void SetDirectory(WCHAR* dir) { directory = dir; } 

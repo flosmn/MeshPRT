@@ -94,7 +94,6 @@
   <ItemGroup>
     <None Include="..\..\shader\cubemap.fx" />
     <None Include="..\..\shader\diffuse.fx" />
-    <None Include="..\..\shader\diffuse_cpu.fx" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -103,13 +103,10 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\shader\diffuse.fx">
-      <Filter>Resource Files</Filter>
-    </None>
     <None Include="..\..\shader\cubemap.fx">
       <Filter>Resource Files</Filter>
     </None>
-    <None Include="..\..\shader\diffuse_cpu.fx">
+    <None Include="..\..\shader\diffuse.fx">
       <Filter>Resource Files</Filter>
     </None>
   </ItemGroup>

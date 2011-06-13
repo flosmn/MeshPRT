@@ -31,21 +31,6 @@ Mesh::Mesh(IDirect3DDevice9 *device)
   mSpecularPower = 8.0f;
 }
 
-HRESULT Mesh::SetPRTConstantsInEffect() 
-{
-  HRESULT hr;
-
-  DWORD numClusters = mPRTCompBuffer->GetNumClusters();
-  DWORD numChannels = mPRTCompBuffer->GetNumChannels();
-  DWORD numPCA = mPRTCompBuffer->GetNumPCA();
-
-  UINT size = numClusters * ( 4 + numChannels * numPCA );
-  hr =  mEffect->SetFloatArray( "aPRTConstants", mPRTConstants, size );
-  
-  PD( hr, L"set float array" );
-  return hr;
-}
-
 D3DXCOLOR Mesh::GetDiffuseMaterial(int i) 
 {
   return mDiffuseMtrl[0];

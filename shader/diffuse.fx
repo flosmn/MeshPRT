@@ -4,9 +4,6 @@
 // Does basic diffuse lighting.
 //=============================================================================
 
-#define NUM_CHANNELS	3
-float4 aPRTConstants[NUM_CLUSTERS*(1+NUM_CHANNELS*(NUM_PCA/4))];
-
 uniform extern bool environmentLighting;
 uniform extern bool useTextures;
 
@@ -42,28 +39,6 @@ sampler EnvSampler = sampler_state
     MinFilter = LINEAR;
     MagFilter = LINEAR;
 };
-
-float4 GetPRTDiffuse( int iClusterOffset, float4 vPCAWeights[NUM_PCA/4] )
-{         
-    float4 vAccumR = float4(0,0,0,0);
-    float4 vAccumG = float4(0,0,0,0);
-    float4 vAccumB = float4(0,0,0,0);
-    
-    for (int j=0; j < (NUM_PCA/4); j++) 
-    {
-        vAccumR += vPCAWeights[j] * aPRTConstants[iClusterOffset+1+(NUM_PCA/4)*0+j];
-        vAccumG += vPCAWeights[j] * aPRTConstants[iClusterOffset+1+(NUM_PCA/4)*1+j];
-        vAccumB += vPCAWeights[j] * aPRTConstants[iClusterOffset+1+(NUM_PCA/4)*2+j];
-    }    
-
-    float4 vDiffuse = aPRTConstants[iClusterOffset];
-    vDiffuse.r += dot(vAccumR,1);
-    vDiffuse.g += dot(vAccumG,1);
-    vDiffuse.b += dot(vAccumB,1);
-    
-    return vDiffuse;
-}
-
 
 // per vertex lighting -------------------------------------------------------------------------------------------
  
@@ -155,8 +130,7 @@ struct OutputPrtLightingVS
 OutputPrtLightingVS PRTDiffuseVS( float3 posL : POSITION,
 								  float3 normalL : NORMAL0, 
 								  float2 in_tex : TEXCOORD0,
-								  int iClusterOffset : BLENDWEIGHT,
-								  float4 vPCAWeights[NUM_PCA/4] : BLENDWEIGHT1)
+								  float4 in_diffuseColor : BLENDWEIGHT1)
 {
     OutputPrtLightingVS outVS;
 
@@ -170,7 +144,7 @@ OutputPrtLightingVS PRTDiffuseVS( float3 posL : POSITION,
 	outVS.posH = mul(outVS.posH, gView);
 	outVS.posH = mul(outVS.posH, gProjection);
     
-    outVS.Diffuse = GetPRTDiffuse( iClusterOffset, vPCAWeights );
+    outVS.Diffuse = in_diffuseColor;
     outVS.Diffuse *= gDiffuseMtrl;
 
 	if( useTextures ) {
