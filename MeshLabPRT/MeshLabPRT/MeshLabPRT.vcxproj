@@ -73,6 +73,7 @@
     <ClInclude Include="..\..\MeshDatastructures.h" />
     <ClInclude Include="..\..\ObjFileParser.h" />
     <ClInclude Include="..\..\PRTEngine.h" />
+    <ClInclude Include="..\..\PRTHierarchy.h" />
     <ClInclude Include="..\..\Window.h" />
     <ClInclude Include="..\..\XFileCreator.h" />
   </ItemGroup>
@@ -88,6 +89,7 @@
     <ClCompile Include="..\..\Mesh.cpp" />
     <ClCompile Include="..\..\ObjFileParser.cpp" />
     <ClCompile Include="..\..\PRTEngine.cpp" />
+    <ClCompile Include="..\..\PRTHierarchy.cpp" />
     <ClCompile Include="..\..\Window.cpp" />
     <ClCompile Include="..\..\XFileCreator.cpp" />
   </ItemGroup>

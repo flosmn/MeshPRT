@@ -18,18 +18,22 @@ Mesh::Mesh(IDirect3DDevice9 *device)
   mDevice = device;
   D3DXMatrixIdentity(&mWorld);
 
-  mDiffuseMtrl[0].r = 1.0f; mDiffuseMtrl[0].g = 1.0f; mDiffuseMtrl[0].b = 1.0f;
+  mDiffuseMtrl[0].r = 1.0f;
+  mDiffuseMtrl[0].g = 1.0f;
+  mDiffuseMtrl[0].b = 1.0f;
   mDiffuseMtrl[0].a = 1.0f;
   
-  mDiffuseMtrl[1].r = 1.0f; mDiffuseMtrl[1].g = 1.0f; mDiffuseMtrl[1].b = 1.0f; 
+  mDiffuseMtrl[1].r = 1.0f;
+  mDiffuseMtrl[1].g = 1.0f;
+  mDiffuseMtrl[1].b = 1.0f; 
   mDiffuseMtrl[1].a = 1.0f;
   
-  mDiffuseMtrl[2].r = 1.0f; mDiffuseMtrl[2].g = 1.0f; mDiffuseMtrl[2].b = 1.0f; 
+  mDiffuseMtrl[2].r = 1.0f;
+  mDiffuseMtrl[2].g = 1.0f;
+  mDiffuseMtrl[2].b = 1.0f; 
   mDiffuseMtrl[2].a = 1.0f;
 
-  mSpecularMtrl = D3DXCOLOR(1.0f, 1.0f, 1.0f, 1.0f);
-  mSpecularPower = 8.0f;
-}
+  }
 
 D3DXCOLOR Mesh::GetDiffuseMaterial(int i) 
 {
@@ -39,10 +43,6 @@ D3DXCOLOR Mesh::GetDiffuseMaterial(int i)
 void Mesh::LoadFX(ID3DXEffect *effect) 
 {
   mEffect = effect;
-
-  mhDiffuseMtrl           = mEffect->GetParameterByName(0, "gDiffuseMtrl");
-  mhSpecularMtrl          = mEffect->GetParameterByName(0, "gSpecularMtrl");
-  mhSpecularPower         = mEffect->GetParameterByName(0, "gSpecularPower");
   mhWorld                 = mEffect->GetParameterByName(0, "gWorld");
   mhWorldInverseTranspose = mEffect->GetParameterByName(0, "gWorldInverseTranspose");
 }
@@ -68,8 +68,6 @@ void Mesh::DrawMesh()
 
   mEffect->SetMatrix( mhWorldInverseTranspose, &worldInverseTranspose );
   mEffect->SetValue( mhWorld, &mWorld, sizeof(D3DXMATRIX) );
-  mEffect->SetValue( mhSpecularMtrl, &mSpecularMtrl, sizeof(D3DXCOLOR) );
-  mEffect->SetValue( mhSpecularPower, &mSpecularPower, sizeof(D3DXCOLOR) );
   mEffect->CommitChanges();
 
   DWORD dwNumMeshes = 0;
@@ -87,9 +85,7 @@ void Mesh::DrawMesh()
     {
       material = D3DXCOLOR( 1.0f, 1.0f, 1.0f, 1.0f );
     }
-    
-    hr = mEffect->SetValue( mhDiffuseMtrl, &material, sizeof(D3DXCOLOR) );
-    
+        
     mEffect->CommitChanges();
     mMesh->DrawSubset( i );
   }

@@ -5,6 +5,7 @@
 #include "PRTEngine.h"
 #include "CubeMap.h"
 #include "Light.h"
+#include "PRTHierarchy.h"
 
 class MeshPRT : public D3DApp
 {
@@ -22,7 +23,7 @@ public:
   void drawScene();
 
   // Helper methods
-  void buildFX(Mesh* mesh);
+  void buildFX();
   void buildViewMtx();
   void buildProjMtx();
   
@@ -30,10 +31,7 @@ private:
   HRESULT Init(ID3DXMesh* mesh);
   HRESULT UpdateLighting();
   void SetTechnique();
-
-  bool phongShading;
-  bool environmentLighting;
-
+    
   bool initialized;
 
   float reflectivity;
@@ -41,24 +39,18 @@ private:
   GfxStats* mGfxStats;
 
   ID3DXEffect* mFX;
-  D3DXHANDLE   mhPerPixelLighting; 
   D3DXHANDLE   mhPRTLighting;  
   D3DXHANDLE   mhView;
   D3DXHANDLE   mhProjection;
   D3DXHANDLE   mhEyePosW;
-  D3DXHANDLE   mhLightPositionW;
-  D3DXHANDLE   mhLightVecW;
-  D3DXHANDLE   mhLightColor;
   D3DXHANDLE   mhReflectivity;
 
   D3DXMATRIX mWorld;
   D3DXMATRIX mProj;
 
-  Mesh *mMesh;
   Camera *mCamera;
-  PRTEngine* mPRTEngine;
   CubeMap* mCubeMap;
-  Light* mLight;
+  PRTHierarchy* mPRTHierarchy;
 };
 
 bool StartDirectX(ID3DXMesh* mesh) {
@@ -83,6 +75,8 @@ bool StartDirectX(ID3DXMesh* mesh) {
 MeshPRT::MeshPRT( std::string winCaption, ID3DXMesh* mesh, D3DDEVTYPE devType, DWORD requestedVP )
   : D3DApp(winCaption, devType, requestedVP)
 {
+  mPRTHierarchy = 0;
+  
   if(!checkDeviceCaps())
   {
     MessageBox(0, L"checkDeviceCaps() Failed", 0, 0);
@@ -103,11 +97,9 @@ MeshPRT::MeshPRT( std::string winCaption, ID3DXMesh* mesh, D3DDEVTYPE devType, D
 MeshPRT::~MeshPRT()
 {
   delete mGfxStats;
-  delete mMesh;
-  delete mPRTEngine;
-  delete mLight;
   delete mCamera;
   delete mCubeMap;
+  delete mPRTHierarchy;
 }
 
 bool MeshPRT::checkDeviceCaps()
@@ -148,53 +140,28 @@ bool MeshPRT::IsInitialized() {
 
 HRESULT MeshPRT::Init(ID3DXMesh* mesh) {
   HRESULT hr;
-
-  phongShading = false;
-  environmentLighting = true;
-
+    
   reflectivity = 0.3f;
   DWORD order = 6;
-  
-  mMesh = new Mesh(gd3dDevice);
+    
+  buildFX();
 
-  if(mesh == NULL){
-    hr = mMesh->LoadMesh(L"models/", L"bigship1", L".x");
-  }
-  else{
-    hr = mMesh->LoadMesh(mesh);
-    /* mesh is now released*/
-  }
-  PD(hr, L"load mesh");
-  if(FAILED(hr)) return hr;
-  
   mCubeMap = new CubeMap(gd3dDevice);
   hr = mCubeMap->LoadCubeMap(L"cubemaps/", L"stpeters_cross", L".dds");
   PD(hr, L"load cube map");
   if(FAILED(hr)) return hr;
 
-  hr = mCubeMap->CalculateSHCoefficients(order);
-  PD(hr, L"calculate SHCoefficients of cube map light");
-  if(FAILED(hr)) return hr;
+  mPRTHierarchy = new PRTHierarchy(gd3dDevice);
+  mPRTHierarchy->LoadMeshHierarchy(L"bigship1",
+                                   L"bigship1",
+                                   L"models/",
+                                   L".x",
+                                   order);
+    
+  mPRTHierarchy->CalculateSHCoefficients(mCubeMap);
+  mPRTHierarchy->CalculateDiffuseColor();
+  mPRTHierarchy->LoadEffect(mFX);
   
-  mLight = new Light( D3DXVECTOR3(0.0f, 5.0f, -5.0f),
-                      D3DXVECTOR3(-1.0f, -1.0f, 1.0f),
-                      D3DXCOLOR(1.0f, 1.0f, 1.0f, 1.0f) );
-
-  hr = mLight->CalculateSHCoefficients(order);
-  PD(hr, L"calculate SHCoefficients of directional light");
-  if(FAILED(hr)) return hr;
-
-  mPRTEngine = new PRTEngine(gd3dDevice, order);
-
-  hr = mPRTEngine->CalculateSHCoefficients(mMesh);
-  PD(hr, L"calculate sh coefficients for mesh");
-  if(FAILED(hr)) return hr;
-
-  buildFX(mMesh);
-  mMesh->LoadFX(mFX);
-
-  UpdateLighting();
-
   mGfxStats = new GfxStats();
 
   D3DXMatrixIdentity(&mWorld);
@@ -208,31 +175,14 @@ HRESULT MeshPRT::Init(ID3DXMesh* mesh) {
 
 void MeshPRT::updateScene(float dt)
 {
-  mGfxStats->setVertexCount(mMesh->GetNumVertices());
-  mGfxStats->setTriCount(mMesh->GetNumFaces());
+  mGfxStats->setVertexCount(mPRTHierarchy->GetNumVertices());
+  mGfxStats->setTriCount(mPRTHierarchy->GetNumFaces());
   mGfxStats->update(dt);
 
   mCamera->update(dt);
 
   gDInput->poll();
-
-  if( gDInput->keyDown(DIK_P) )	 
-    phongShading = true;
-
-  if( gDInput->keyDown(DIK_O) )	 
-    phongShading = false;
-
-  if( gDInput->keyDown(DIK_N) && !environmentLighting )	 
-  {
-    environmentLighting = true;
-    UpdateLighting();
-  }
-
-  if( gDInput->keyDown(DIK_M) && environmentLighting ) {
-    environmentLighting = false;
-    UpdateLighting();
-  }
-
+  
   if( gDInput->keyDown(DIK_Z) ) {
     reflectivity = reflectivity - 0.0001f;
 
@@ -252,21 +202,7 @@ void MeshPRT::updateScene(float dt)
 
 HRESULT MeshPRT::UpdateLighting(){
   HRESULT hr;
-
-  if(environmentLighting) {
-    hr = mPRTEngine->ConvoluteSHCoefficients(mMesh, mCubeMap);
-  }
-  else{
-    hr = mPRTEngine->ConvoluteSHCoefficients(mMesh, mLight);
-  }
-
-  PD(hr, L"convolute sh coefficients");
-  if(FAILED(hr)) return hr;
-
-  hr = mPRTEngine->CalculateDiffuseColor(mMesh);
-  PD(hr, L"calculate diffuse color of mesh");
-  if(FAILED(hr)) return hr;
-
+    
   return D3D_OK;
 }
 
@@ -278,37 +214,27 @@ void MeshPRT::drawScene()
   gd3dDevice->Clear(0, 0, D3DCLEAR_TARGET, color, 1.0f, 0);
 
   gd3dDevice->BeginScene();
-     
-  if(environmentLighting) {
-    D3DXMATRIX mWVP = mCamera->view() * mProj;
-    mCubeMap->DrawCubeMap(&mWVP);
-    mFX->SetTexture( "EnvMap", mCubeMap->GetTexture() );
-    mFX->SetFloat( "gReflectivity", reflectivity );
-  }
-  else {
-    mFX->SetFloat( "gReflectivity", 0.0f );
-  }
+    
+  D3DXMATRIX mWVP = mCamera->view() * mProj;
+  mCubeMap->DrawCubeMap(&mWVP);
+  mFX->SetTexture( "EnvMap", mCubeMap->GetTexture() );
+  mFX->SetFloat( "gReflectivity", reflectivity );
+    
+  mFX->SetBool("useTextures", mPRTHierarchy->HasTextures());
   
-  mFX->SetBool("environmentLighting", environmentLighting);
-  mFX->SetBool("useTextures", mMesh->HasTextures());
-  
-  SetTechnique();
+  mFX->SetTechnique(mhPRTLighting);
     
   mFX->SetValue(mhEyePosW, &(mCamera->pos()), sizeof(D3DXVECTOR3));
   mFX->SetMatrix(mhView, &(mCamera->view()));  
   mFX->SetMatrix(mhProjection, &mProj);
 
-  mFX->SetValue(mhLightVecW, &mLight->GetLightDirection(), sizeof(D3DXVECTOR3));
-  mFX->SetValue(mhLightPositionW, &mLight->GetLightPosition(), sizeof(D3DXCOLOR));
-  mFX->SetValue(mhLightColor, &mLight->GetLightColor(), sizeof(D3DXCOLOR));
-  
   // Begin passes.
   UINT numPasses = 0;
   mFX->Begin(&numPasses, 0);
   for(UINT i = 0; i < numPasses; ++i)
   {
     mFX->BeginPass(i);
-    mMesh->DrawMesh();
+    mPRTHierarchy->DrawMesh();
     mFX->EndPass();
   }
   mFX->End();
@@ -320,32 +246,15 @@ void MeshPRT::drawScene()
   gd3dDevice->Present(0, 0, 0, 0);
 }
 
-void MeshPRT::SetTechnique() {
-  HRESULT hr;
-
-  if(phongShading) {
-    hr = mFX->SetTechnique(mhPerPixelLighting);
-    // PD(hr, L"set technique to per pixel lighting");
-  }
-  else {
-    hr = mFX->SetTechnique(mhPRTLighting);
-    // PD(hr, L"set technique to PRT lighting");
-  }
-}
-
-void MeshPRT::buildFX(Mesh* mesh)
+void MeshPRT::buildFX()
 {
   WCHAR* effectName = L"shader/diffuse.fx";
   LoadEffectFile(gd3dDevice, effectName, 0, D3DXSHADER_DEBUG, &mFX);
   
-  mhPerPixelLighting      = mFX->GetTechniqueByName("PerPixelLighting");  
   mhPRTLighting           = mFX->GetTechniqueByName("PRTLighting");
   mhView                  = mFX->GetParameterByName(0, "gView");
   mhProjection            = mFX->GetParameterByName(0, "gProjection");
-  mhLightVecW             = mFX->GetParameterByName(0, "gLightVecW");
   mhEyePosW               = mFX->GetParameterByName(0, "gEyePosW");
-  mhLightColor            = mFX->GetParameterByName(0, "gLightColor");
-  mhLightPositionW        = mFX->GetParameterByName(0, "gLightPosW");
   mhReflectivity          = mFX->GetParameterByName(0, "gReflectivity");
 
   PD(D3D_OK, L"done building FX");

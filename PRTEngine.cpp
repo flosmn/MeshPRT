@@ -1,24 +1,11 @@
 #include "PRTEngine.h"
 
-struct LOCAL_VERTEX {
-    D3DXVECTOR3 position;
-    D3DXVECTOR3 normal;
-    D3DXVECTOR2 texCoords;
-    float clusterID;
-    D3DXCOLOR blendWeight1;
-    D3DXCOLOR blendWeight2;
-    D3DXCOLOR blendWeight3;
-    D3DXCOLOR blendWeight4;
-    D3DXCOLOR blendWeight5;
-    D3DXCOLOR blendWeight6;
-  };
-
 PRTEngine::PRTEngine(IDirect3DDevice9* device, DWORD order) {
   mDevice = device;
   mOrder = order;
 
-  mNumBounces = 2;
-  mNumRays = 1024;
+  mNumBounces = 0;
+  mNumRays = 256;
   mNumChannels = 3;
   mNumPCA = mNumChannels * mOrder * mOrder;
   if(mNumPCA > 24) mNumPCA = 24;
@@ -127,6 +114,11 @@ HRESULT PRTEngine::CalculateSHCoefficients(Mesh* mesh) {
   return D3D_OK;
 }
 
+/*
+After the call of this function the precomputed diffuse color will be stored
+at the vertex data position blendweight1 (see FULL_VERTEX structure). 
+Previously stored data on this position will be overwritten (PCAWeights). 
+*/
 HRESULT PRTEngine::CalculateDiffuseColor(Mesh* mesh) {
   HRESULT hr;
 
@@ -143,7 +135,7 @@ HRESULT PRTEngine::CalculateDiffuseColor(Mesh* mesh) {
   PD(hr, L"extract to mesh" );
   if(FAILED(hr)) return hr;
        
-  LOCAL_VERTEX* pVertexBuffer = NULL;
+  FULL_VERTEX* pVertexBuffer = NULL;
   hr = mesh->GetMesh()->LockVertexBuffer( 0, ( void** )&pVertexBuffer );
   PD(hr, L"lock vertex buffer");
   if(FAILED(hr)) return hr;
@@ -167,6 +159,10 @@ HRESULT PRTEngine::CalculateDiffuseColor(Mesh* mesh) {
   return D3D_OK;
 }
 
+/*
+calculates the diffuse color for a cluster according to the PCAWeights of a
+vertex and the basis vectors of the cluster.
+*/
 D3DXCOLOR PRTEngine::GetPrecomputedDiffuseColor( int clusterID, 
                                                  float *vPCAWeights, 
                                                  DWORD numPCA, 

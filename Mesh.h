@@ -61,15 +61,10 @@ protected:
   float mRotationX;
   float mRotationY;
   float mRotationZ;
-  float mSpecularPower;
-  
+    
   D3DXMATRIX  mWorld;
 	D3DXCOLOR   mDiffuseMtrl[3];
-	D3DXCOLOR   mSpecularMtrl;
-	
-  D3DXHANDLE   mhDiffuseMtrl;
-  D3DXHANDLE   mhSpecularMtrl;
-  D3DXHANDLE   mhSpecularPower;
+		
   D3DXHANDLE   mhWorld;
   D3DXHANDLE   mhWorldInverseTranspose;
     

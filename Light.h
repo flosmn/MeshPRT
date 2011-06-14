@@ -11,11 +11,12 @@ public:
   Light();
   virtual ~Light();
 
+  HRESULT CalculateSHCoefficients(DWORD order);
+
   D3DXVECTOR3 GetLightDirection() { return mLightDirection; }
   D3DXVECTOR3 GetLightPosition() { return mLightPosition; }
   D3DXCOLOR GetLightColor() { return mLightColor; }
-  HRESULT CalculateSHCoefficients(DWORD order);
-  
+   
 protected:
   D3DXVECTOR3 mLightDirection;
   D3DXVECTOR3 mLightPosition;

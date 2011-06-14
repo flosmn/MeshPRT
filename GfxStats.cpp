@@ -99,11 +99,11 @@ void GfxStats::display()
 	// Make static so memory is not allocated every frame.
 	static char buffer[256];
 
-    sprintf(buffer, "Frames Per Second = %.2f\n"
+  sprintf(buffer, "Frames Per Second = %.2f\n"
 		"Milliseconds Per Frame = %.4f\n"
 		"Triangle Count = %d\n"
 		"Vertex Count = %d", mFPS, mMilliSecPerFrame, mNumTris, mNumVertices);
 
 	RECT R = {5, 5, 0, 0};
-    //mFont->DrawText(0, buffer, -1, &R, DT_NOCLIP, D3DCOLOR_XRGB(0,0,0));
+  mFont->DrawText(0, buffer, -1, &R, DT_NOCLIP, D3DCOLOR_XRGB(200,200,200));
 }
