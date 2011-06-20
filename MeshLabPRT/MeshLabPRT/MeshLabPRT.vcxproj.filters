@@ -69,6 +69,9 @@
     <ClInclude Include="..\..\K3Tree.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Timer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\Camera.cpp">
@@ -119,12 +122,18 @@
     <ClCompile Include="..\..\K3Tree.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\Timer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\shader\cubemap.fx">
       <Filter>Resource Files</Filter>
     </None>
     <None Include="..\..\shader\diffuse.fx">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="..\..\shader\errorVisualization.fx">
       <Filter>Resource Files</Filter>
     </None>
   </ItemGroup>

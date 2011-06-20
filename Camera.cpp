@@ -4,10 +4,10 @@ Camera::Camera()
 {
 	D3DXMatrixIdentity(&mView);
 
-	mPosW   = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
-	mRightW = D3DXVECTOR3(1.0f, 0.0f, 0.0f);
+	mPosW   = D3DXVECTOR3(0.0f, 0.0f, 25.0f);
+	mRightW = D3DXVECTOR3(-1.0f, 0.0f, 0.0f);
 	mUpW    = D3DXVECTOR3(0.0f, 1.0f, 0.0f);
-	mLookW  = D3DXVECTOR3(0.0f, 0.0f, 1.0f);
+	mLookW  = D3DXVECTOR3(0.0f, 0.0f, -1.0f);
 
 	// Client should adjust to a value that makes sense for application's
 	// unit scale, and the object the camera is attached to--e.g., car, jet,

@@ -34,7 +34,7 @@ sampler EnvSampler = sampler_state
 };
 
 
-struct OutputPrtLightingVS
+struct OutputErrorVisualizationVS
 {
     float4 posH     : POSITION0;    // position of the vertex
     float2 tex		: TEXCOORD0;
@@ -43,13 +43,13 @@ struct OutputPrtLightingVS
 	float4 Diffuse  : COLOR0;      // diffuse color of the vertex  
 };
 
-OutputPrtLightingVS PRTDiffuseVS( float3 posL : POSITION,
+OutputErrorVisualizationVS ErrorVisualizationVS( float3 posL : POSITION,
 								  float3 normalL : NORMAL0, 
 								  float2 in_tex : TEXCOORD0,
 								  float4 in_diffuseColorApprox : BLENDWEIGHT1,
-								  float4 in_diffuseColorExact : BLENDWEIGHT2)
+								  float4 in_diffuseColor : BLENDWEIGHT2)
 {
-    OutputPrtLightingVS outVS;
+    OutputErrorVisualizationVS outVS;
 
 	outVS.normalW = mul(float4(normalL, 0.0f), gWorldInverseTranspose).xyz;
 	outVS.normalW = normalize(outVS.normalW);
@@ -61,49 +61,39 @@ OutputPrtLightingVS PRTDiffuseVS( float3 posL : POSITION,
 	outVS.posH = mul(outVS.posH, gView);
 	outVS.posH = mul(outVS.posH, gProjection);
     
-    outVS.Diffuse = in_diffuseColorApprox;
+	float4 diffApprox = in_diffuseColorApprox;
+	float4 diffExact = in_diffuseColor;
+	float diff = 	sqrt(abs(diffApprox.x - diffExact.x)) 
+				  + sqrt(abs(diffApprox.y - diffExact.y))
+				  + sqrt(abs(diffApprox.z - diffExact.z));
+	diff = diff / 3.0f;
+
+	float4 red = float4(1.0f, 0.0f, 0.0f, 0.0f);
+	float4 white = float4(1.0f, 1.0f, 1.0f, 1.0f);
     
-	if( useTextures ) {
-		outVS.tex = in_tex;
-	}
-	else {
-		outVS.tex = 0;
-	}
-    
+	outVS.Diffuse = diff * red + (1 - diff) * white;
+    outVS.tex = 0;
+	    
     return outVS;
 }
 
-float4 PRTDiffusePS(float4 posH     : POSITION0,
+float4 ErrorVisualizationPS(float4 posH     : POSITION0,
 					float2 tex		: TEXCOORD0,
 					float3 normalW  : TEXCOORD1,
 					float3 toEyeW   : TEXCOORD2,
-					float4 Diffuse  : COLOR0) : COLOR
+					float4 in_diffuse  : COLOR0) : COLOR
 {
     normalW = normalize(normalW);
 	toEyeW = normalize(toEyeW);
-	
-	float4 diffuseColor = Diffuse;
-	
-	float4 Albedo = float4(1.0f, 1.0f, 1.0f, 1.0f);
-	if( useTextures ) Albedo = tex2D(Sampler, tex);
-
-	diffuseColor = Albedo * diffuseColor;
-
-	float3 envMapTex = reflect(-toEyeW, normalW);
-	float4 reflectedColor = texCUBE(EnvSampler, envMapTex);
-	
-	float3 final = gReflectivity*reflectedColor + 
-							(1.0f-gReflectivity)*(diffuseColor);
-	
-	return float4(final, 1.0f);
+	return in_diffuse;	
 }
 
 
-technique PRTLighting
+technique ErrorVisualization
 {
     pass P0
     {          
-        vertexShader = compile vs_2_0 PRTDiffuseVS();
-        pixelShader  = compile ps_2_0 PRTDiffusePS();
+        vertexShader = compile vs_2_0 ErrorVisualizationVS();
+        pixelShader  = compile ps_2_0 ErrorVisualizationPS();
     }
 }

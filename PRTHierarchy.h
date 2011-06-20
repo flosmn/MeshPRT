@@ -6,6 +6,7 @@
 #include "PRTEngine.h"
 #include "PRTHierarchyMapping.h"
 #include "LightSource.h"
+#include "Timer.h"
 
 
 class PRTHierarchy{
@@ -45,12 +46,15 @@ private:
   Mesh* mApproxMesh;
   PRTEngine* mPRTEngine;
   PRTHierarchyMapping* mPRTHierarchyMapping;
+
+  Timer* mTimer;
   
   std::vector<Vertex> mRenderMeshVertices;
   std::vector<Vertex> mApproxMeshVertices;
   std::vector<D3DXVECTOR3> mRenderMeshVertexNormals;
   std::vector<D3DXVECTOR3> mApproxMeshVertexNormals;
   std::vector<D3DXCOLOR> mRenderMeshVertexColors;
+  std::vector<D3DXCOLOR> mRenderMeshVertexColorsExact;
   std::vector<D3DXCOLOR> mApproxMeshVertexColors;
     
   DWORD mOrder;

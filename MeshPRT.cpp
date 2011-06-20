@@ -34,17 +34,15 @@ private:
     
   bool initialized;
 
+  bool visualizeError;
+
   float reflectivity;
 
   GfxStats* mGfxStats;
 
   ID3DXEffect* mFX;
-  D3DXHANDLE   mhPRTLighting;  
-  D3DXHANDLE   mhView;
-  D3DXHANDLE   mhProjection;
-  D3DXHANDLE   mhEyePosW;
-  D3DXHANDLE   mhReflectivity;
-
+  ID3DXEffect* mErrorVisFX;
+  
   D3DXMATRIX mWorld;
   D3DXMATRIX mProj;
 
@@ -82,9 +80,12 @@ MeshPRT::MeshPRT( std::string winCaption, ID3DXMesh* mesh, D3DDEVTYPE devType, D
     MessageBox(0, L"checkDeviceCaps() Failed", 0, 0);
     PostQuitMessage(0);
   }
+  
+  visualizeError = true;
   initialized = false;
 
   HRESULT hr = Init(mesh);
+
   PD(hr, L"initialize");
   if(FAILED(hr)){
     initialized = false;
@@ -153,7 +154,7 @@ HRESULT MeshPRT::Init(ID3DXMesh* mesh) {
 
   mPRTHierarchy = new PRTHierarchy(gd3dDevice);
   mPRTHierarchy->LoadMeshHierarchy(L"bimba_d",
-                                   L"bimba_e",
+                                   L"bigship1",
                                    L"models/",
                                    L".x",
                                    order);
@@ -161,7 +162,12 @@ HRESULT MeshPRT::Init(ID3DXMesh* mesh) {
   mPRTHierarchy->ScaleMeshes();    
   mPRTHierarchy->CalculateSHCoefficients(mCubeMap);
   mPRTHierarchy->CalculateDiffuseColor();
-  mPRTHierarchy->LoadEffect(mFX);
+  if(visualizeError){
+    mPRTHierarchy->LoadEffect(mErrorVisFX);
+  }
+  else{
+    mPRTHierarchy->LoadEffect(mFX);
+  }
   
   mGfxStats = new GfxStats();
 
@@ -215,30 +221,48 @@ void MeshPRT::drawScene()
   gd3dDevice->Clear(0, 0, D3DCLEAR_TARGET, color, 1.0f, 0);
 
   gd3dDevice->BeginScene();
+
+  ID3DXEffect* effect;
+  if(visualizeError) {
+    effect = mErrorVisFX;
+  } else {
+    effect = mFX;
+  }
+  D3DXHANDLE handle;
     
   D3DXMATRIX mWVP = mCamera->view() * mProj;
   mCubeMap->DrawCubeMap(&mWVP);
-  mFX->SetTexture( "EnvMap", mCubeMap->GetTexture() );
-  mFX->SetFloat( "gReflectivity", reflectivity );
+  effect->SetTexture( "EnvMap", mCubeMap->GetTexture() );
     
-  mFX->SetBool("useTextures", mPRTHierarchy->HasTextures());
+  effect->SetBool("useTextures", mPRTHierarchy->HasTextures());
   
-  mFX->SetTechnique(mhPRTLighting);
+  if(visualizeError){
+    handle = effect->GetTechniqueByName("ErrorVisualization");
+    effect->SetFloat( "gReflectivity", 0.0f );
+  }
+  else{
+    handle = effect->GetTechniqueByName("PRTLighting");
+    effect->SetFloat( "gReflectivity", reflectivity );
+  }
+  effect->SetTechnique(handle);
     
-  mFX->SetValue(mhEyePosW, &(mCamera->pos()), sizeof(D3DXVECTOR3));
-  mFX->SetMatrix(mhView, &(mCamera->view()));  
-  mFX->SetMatrix(mhProjection, &mProj);
+  handle = effect->GetParameterByName(0, "gEyePosW");
+  effect->SetValue(handle, &(mCamera->pos()), sizeof(D3DXVECTOR3));
+  handle = effect->GetParameterByName(0, "gView");
+  effect->SetMatrix(handle, &(mCamera->view()));  
+  handle = effect->GetParameterByName(0, "gProjection");
+  effect->SetMatrix(handle, &mProj);
 
   // Begin passes.
   UINT numPasses = 0;
-  mFX->Begin(&numPasses, 0);
+  effect->Begin(&numPasses, 0);
   for(UINT i = 0; i < numPasses; ++i)
   {
-    mFX->BeginPass(i);
+    effect->BeginPass(i);
     mPRTHierarchy->DrawMesh();
-    mFX->EndPass();
+    effect->EndPass();
   }
-  mFX->End();
+  effect->End();
   
   mGfxStats->display();
 
@@ -251,13 +275,10 @@ void MeshPRT::buildFX()
 {
   WCHAR* effectName = L"shader/diffuse.fx";
   LoadEffectFile(gd3dDevice, effectName, 0, D3DXSHADER_DEBUG, &mFX);
-  
-  mhPRTLighting           = mFX->GetTechniqueByName("PRTLighting");
-  mhView                  = mFX->GetParameterByName(0, "gView");
-  mhProjection            = mFX->GetParameterByName(0, "gProjection");
-  mhEyePosW               = mFX->GetParameterByName(0, "gEyePosW");
-  mhReflectivity          = mFX->GetParameterByName(0, "gReflectivity");
 
+  effectName = L"shader/errorVisualization.fx";
+  LoadEffectFile(gd3dDevice, effectName, 0, D3DXSHADER_DEBUG, &mErrorVisFX);
+  
   PD(D3D_OK, L"done building FX");
 }
 

@@ -22,8 +22,8 @@ HRESULT PRTEngine::CalculateSHCoefficients(Mesh* mesh) {
   ID3DXPRTBuffer* pBufferA = NULL;
   ID3DXPRTBuffer* pBufferB = NULL;
   ID3DXPRTCompBuffer *compPRTBuffer;
-  ID3DXMesh* pMesh = mesh->GetMesh();  
-  
+  ID3DXMesh* pMesh = mesh->GetMesh();
+      
   DWORD dwNumMeshes = 0;
   pMesh->GetAttributeTable( NULL, &dwNumMeshes );
   float mLengthScale = 25.0f;
@@ -43,38 +43,43 @@ HRESULT PRTEngine::CalculateSHCoefficients(Mesh* mesh) {
   PD(mPRTEngine->SetSamplingInfo( mNumRays, FALSE, TRUE, FALSE, 0.0f ), L"set sampling info");
   PD(mPRTEngine->SetMeshMaterials( getMeshMaterial(mesh), dwNumMeshes, mNumChannels, !hasTextures, mLengthScale), L"set mesh materials" );
 
-  PD(D3DXCreatePRTBuffer( dwNumSamples, mOrder * mOrder, mNumChannels, &pDataTotal ), L"create prt buffer");
-  PD(D3DXCreatePRTBuffer( dwNumSamples, mOrder * mOrder,  mNumChannels, &pBufferA ), L"create prt buffer");
-  PD(D3DXCreatePRTBuffer( dwNumSamples, mOrder * mOrder,  mNumChannels, &pBufferB ), L"create prt buffer");
-
-  PD(mPRTEngine->ComputeDirectLightingSH( mOrder, pDataTotal ), L"compute direct lighting SH");
-    
-  pBufferA->AddBuffer( pDataTotal );
-  
-  hr = mPRTEngine->ComputeBounce( pBufferA, pBufferB, pDataTotal );
-  PD(hr, L"compute first bounce");
-  if(FAILED(hr)) return hr;
-
-  ID3DXPRTBuffer* pPRTBufferTemp = NULL;
-  pPRTBufferTemp = pBufferA;
-  pBufferA = pBufferB;
-  pBufferB = pPRTBufferTemp;
-  
-  hr = mPRTEngine->ComputeBounce( pBufferA, pBufferB, pDataTotal );
-  PD(hr, L"compute second bounce");
-  if(FAILED(hr)) return hr;
-    
+  //check if compbuffer already exists
   WCHAR* bufferfile = Concat(mesh->GetName(), L".compbuffer");
   WCHAR* bufferpath = Concat(mesh->GetDirectory(), bufferfile);
+
+  hr = D3DXLoadPRTCompBufferFromFile(AppendToRootDir(bufferpath), &compPRTBuffer);
+
+  if(FAILED(hr)) {
+    PD(D3DXCreatePRTBuffer( dwNumSamples, mOrder * mOrder, mNumChannels, &pDataTotal ), L"create prt buffer");
+    PD(D3DXCreatePRTBuffer( dwNumSamples, mOrder * mOrder,  mNumChannels, &pBufferA ), L"create prt buffer");
+    PD(D3DXCreatePRTBuffer( dwNumSamples, mOrder * mOrder,  mNumChannels, &pBufferB ), L"create prt buffer");
+
+    PD(mPRTEngine->ComputeDirectLightingSH( mOrder, pDataTotal ), L"compute direct lighting SH");
+    
+    pBufferA->AddBuffer( pDataTotal );
   
-  hr = D3DXCreatePRTCompBuffer( D3DXSHCQUAL_SLOWHIGHQUALITY, 1, mNumPCA, NULL,
+    hr = mPRTEngine->ComputeBounce( pBufferA, pBufferB, pDataTotal );
+    PD(hr, L"compute first bounce");
+    if(FAILED(hr)) return hr;
+
+    ID3DXPRTBuffer* pPRTBufferTemp = NULL;
+    pPRTBufferTemp = pBufferA;
+    pBufferA = pBufferB;
+    pBufferB = pPRTBufferTemp;
+  
+    hr = mPRTEngine->ComputeBounce( pBufferA, pBufferB, pDataTotal );
+    PD(hr, L"compute second bounce");
+    if(FAILED(hr)) return hr;
+   
+    hr = D3DXCreatePRTCompBuffer( D3DXSHCQUAL_SLOWHIGHQUALITY, 1, mNumPCA, NULL,
                                 NULL, pDataTotal, &compPRTBuffer );
-  PD(hr, L"create compressed prt buffer");
-  if(FAILED(hr)) return hr;
+    PD(hr, L"create compressed prt buffer");
+    if(FAILED(hr)) return hr;
   
-  hr = D3DXSavePRTCompBufferToFile( AppendToRootDir(bufferpath), compPRTBuffer );
-  PD(hr, L"save compressed prt buffer to file");
-  if(FAILED(hr)) return hr;
+    hr = D3DXSavePRTCompBufferToFile( AppendToRootDir(bufferpath), compPRTBuffer );
+    PD(hr, L"save compressed prt buffer to file");
+    if(FAILED(hr)) return hr;
+  }
   
   mesh->SetPRTCompBuffer(compPRTBuffer);
 

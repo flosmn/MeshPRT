@@ -79,6 +79,7 @@
     <ClInclude Include="..\..\PRTEngine.h" />
     <ClInclude Include="..\..\PRTHierarchy.h" />
     <ClInclude Include="..\..\PRTHierarchyMapping.h" />
+    <ClInclude Include="..\..\Timer.h" />
     <ClInclude Include="..\..\Window.h" />
     <ClInclude Include="..\..\XFileCreator.h" />
   </ItemGroup>
@@ -97,12 +98,14 @@
     <ClCompile Include="..\..\PRTEngine.cpp" />
     <ClCompile Include="..\..\PRTHierarchy.cpp" />
     <ClCompile Include="..\..\PRTHierarchyMapping.cpp" />
+    <ClCompile Include="..\..\Timer.cpp" />
     <ClCompile Include="..\..\Window.cpp" />
     <ClCompile Include="..\..\XFileCreator.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\shader\cubemap.fx" />
     <None Include="..\..\shader\diffuse.fx" />
+    <None Include="..\..\shader\errorVisualization.fx" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

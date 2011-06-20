@@ -8,6 +8,8 @@ PRTHierarchy::PRTHierarchy(IDirect3DDevice9 *device) {
 
   mVisualizeMapping = false;
 
+  mTimer = new Timer();
+
   mRenderMesh = 0;
   mApproxMesh = 0;
   mPRTEngine = 0;
@@ -23,6 +25,7 @@ PRTHierarchy::~PRTHierarchy() {
   delete mApproxMesh;
   delete mPRTEngine;
   delete mPRTHierarchyMapping;
+  delete mTimer;
 }
 
 HRESULT PRTHierarchy::LoadMeshHierarchy(WCHAR* renderMeshFile, 
@@ -90,23 +93,47 @@ HRESULT PRTHierarchy::ScaleMeshes() {
 HRESULT PRTHierarchy::CalculateSHCoefficients(LightSource* lightSource) {
   HRESULT hr;
   
+  mTimer->Start();
   hr = mPRTEngine->CalculateSHCoefficients(mApproxMesh);
   PD(hr, L"calculate coefficients for approx mesh");
   if(FAILED(hr)) return  hr;
-
+  mTimer->Stop(L"calculate coefficients for approx mesh");
+    
+  mTimer->Start();
+  hr = mPRTEngine->CalculateSHCoefficients(mRenderMesh);
+  PD(hr, L"calculate coefficients for approx mesh");
+  if(FAILED(hr)) return  hr;
+  mTimer->Stop(L"calculate coefficients for render mesh");
+  
   hr = lightSource->CalculateSHCoefficients(mOrder);
   PD(hr, L"calculate coefficients for lightsource");
   if(FAILED(hr)) return hr;
 
+  mTimer->Start();
   hr = mPRTEngine->ConvoluteSHCoefficients(mApproxMesh, lightSource);
   PD(hr, L"convolute coefficients of approx mesh and lightsource");
   if(FAILED(hr)) return hr;
-    
+  mTimer->Stop(L"convolute coefficients of approx mesh and lightsource"); 
+
+  mTimer->Start();
+  hr = mPRTEngine->ConvoluteSHCoefficients(mRenderMesh, lightSource);
+  PD(hr, L"convolute coefficients of render mesh and lightsource");
+  if(FAILED(hr)) return hr;
+  mTimer->Stop(L"convolute coefficients of render mesh and lightsource"); 
+  
   return D3D_OK;
 }
 
 HRESULT PRTHierarchy::CalculateDiffuseColor() {
   HRESULT hr;
+
+  hr = mPRTEngine->CalculateDiffuseColor(mRenderMesh);
+  PD(hr, L"calculate diffuse color for render mesh");
+  if(FAILED(hr)) return hr;
+
+  hr = FillColorVector(mRenderMeshVertexColorsExact, mRenderMesh);
+  PD(hr, L"fill render mesh vertex color vector with exact colors");
+  if(FAILED(hr)) return hr;
 
   hr = mPRTEngine->CalculateDiffuseColor(mApproxMesh);
   PD(hr, L"calculate diffuse color for approx mesh");
@@ -123,7 +150,9 @@ HRESULT PRTHierarchy::CalculateDiffuseColor() {
     PD(L"fill approx mesh with random vertex colors");
   }
 
-  mPRTHierarchyMapping->NearestNeighbourMappingTree( mApproxMeshVertices,
+  mTimer->Start();
+  mPRTHierarchyMapping->NearestNeighbourMappingTree( 3,
+                                                     mApproxMeshVertices,
                                                      mRenderMeshVertices,
                                                      mApproxMeshVertexColors,
                                                      mRenderMeshVertexColors);
@@ -131,7 +160,8 @@ HRESULT PRTHierarchy::CalculateDiffuseColor() {
   hr = SetRenderMeshVertexColors();
   PD(hr, L"set vertex colors for render mesh");
   if(FAILED(hr)) return hr;
-                                                
+  mTimer->Stop(L"NN mapping");
+
   return D3D_OK;
 }
 
@@ -235,6 +265,7 @@ HRESULT PRTHierarchy::SetRenderMeshVertexColors()
 
   for ( DWORD i = 0; i < d3dMesh->GetNumVertices(); ++i ) {
     pVertices[i].blendWeight1 = mRenderMeshVertexColors[i];
+    pVertices[i].blendWeight2 = mRenderMeshVertexColorsExact[i];
   }
 
   hr = d3dMesh->UnlockVertexBuffer();

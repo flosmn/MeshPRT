@@ -55,7 +55,7 @@ private:
   std::vector<Vertex> mVertices;
   std::map<Vertex, int, Vertex> mIndex;
   
-  struct kdtree *mTree;
+  kdtree *mTree;
 };
 
 #endif // K3TREE_H

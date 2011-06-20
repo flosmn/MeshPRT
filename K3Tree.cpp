@@ -7,10 +7,13 @@ K3Tree::K3Tree(std::vector<Vertex> vertices) {
   
   mVertices = vertices;
   mTree = 0;      
-  mTree = kd_create(3); 
+  mTree = kd_create(3);
 }
 
 K3Tree::~K3Tree() {
+}
+
+void K3Tree::Free() {
 }
 
 void K3Tree::FillTreeWithData() {
@@ -88,11 +91,11 @@ void K3Tree::GetNearestNeighbours(Vertex v,
 {
   int K = numberOfNearestNeigbours;
 
-  struct kdres *resultSet = kd_nearest_range3f(mTree,
-                                               v.pos.x,
-                                               v.pos.y,
-                                               v.pos.z,
-                                               mQueryRadius);
+  kdres *resultSet = kd_nearest_range3f(mTree,
+                                        v.pos.x,
+                                        v.pos.y,
+                                        v.pos.z,
+                                        mQueryRadius);
 
   if(kd_res_size(resultSet) < K) {
     mQueryRadius += 0.5f * mQueryEpsilon;
@@ -103,9 +106,7 @@ void K3Tree::GetNearestNeighbours(Vertex v,
     if(kd_res_size(resultSet) > 5*K && mQueryRadius-0.1f * mQueryEpsilon > 0) {
       mQueryRadius -= 0.1f * mQueryEpsilon;
     }
-  }
-
-  resultSet = 0;
+  } 
 }
 
 void K3Tree::GetNearestNeighboursFromResultSet(Vertex v, 
@@ -128,7 +129,6 @@ void K3Tree::GetNearestNeighboursFromResultSet(Vertex v,
   }
 
   for(int i = 0; i < kd_res_size(resultSet); ++i) {
-    float x, y, z;
     int index = -1;
 
     float position[3];
