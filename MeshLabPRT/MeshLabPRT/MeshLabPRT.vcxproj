@@ -36,11 +36,14 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LibraryPath>C:\Users\flosmn\meshlab-sources\meshlab\src\meshlabplugins\filter_meshprt\kdtree;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>C:\Users\flosmn\meshlab-sources\meshlab\src\meshlabplugins\filter_meshprt\kdtree;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -66,6 +69,7 @@
     <ClInclude Include="..\..\d3dUtil.h" />
     <ClInclude Include="..\..\DirectInput.h" />
     <ClInclude Include="..\..\GfxStats.h" />
+    <ClInclude Include="..\..\K3Tree.h" />
     <ClInclude Include="..\..\Light.h" />
     <ClInclude Include="..\..\LightSource.h" />
     <ClInclude Include="..\..\localConfig.h" />
@@ -74,6 +78,7 @@
     <ClInclude Include="..\..\ObjFileParser.h" />
     <ClInclude Include="..\..\PRTEngine.h" />
     <ClInclude Include="..\..\PRTHierarchy.h" />
+    <ClInclude Include="..\..\PRTHierarchyMapping.h" />
     <ClInclude Include="..\..\Window.h" />
     <ClInclude Include="..\..\XFileCreator.h" />
   </ItemGroup>
@@ -82,6 +87,7 @@
     <ClCompile Include="..\..\CubeMap.cpp" />
     <ClCompile Include="..\..\d3dApp.cpp" />
     <ClCompile Include="..\..\d3dUtil.cpp" />
+    <ClCompile Include="..\..\K3Tree.cpp" />
     <ClCompile Include="..\..\MeshPRT.cpp" />
     <ClCompile Include="..\..\DirectInput.cpp" />
     <ClCompile Include="..\..\GfxStats.cpp" />
@@ -90,6 +96,7 @@
     <ClCompile Include="..\..\ObjFileParser.cpp" />
     <ClCompile Include="..\..\PRTEngine.cpp" />
     <ClCompile Include="..\..\PRTHierarchy.cpp" />
+    <ClCompile Include="..\..\PRTHierarchyMapping.cpp" />
     <ClCompile Include="..\..\Window.cpp" />
     <ClCompile Include="..\..\XFileCreator.cpp" />
   </ItemGroup>

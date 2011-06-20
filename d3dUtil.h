@@ -64,6 +64,7 @@ void PD(const WCHAR*, const WCHAR*);
 void PD(const WCHAR*, DWORD);
 void PD(const WCHAR*, int);
 void PD(const WCHAR*, float);
+void PD(const WCHAR*, double);
 void PD(HRESULT);
 void CharArrayToWCharArray(const char* in, WCHAR* out);
 void DbgOutInt(std::string label, int value );

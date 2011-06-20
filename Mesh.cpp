@@ -60,8 +60,7 @@ ID3DXMesh* Mesh::GetMesh()
 void Mesh::DrawMesh() 
 {
   HRESULT hr;
-  D3DXMatrixIdentity(&mWorld);
-
+  
   D3DXMATRIX worldInverseTranspose;
   D3DXMatrixInverse( &worldInverseTranspose, 0, &mWorld );
   D3DXMatrixTranspose( &worldInverseTranspose, &worldInverseTranspose );

@@ -1,6 +1,8 @@
 #ifndef MESHDATASTRUCTURES_H
 #define MESHDATASTRUCTURES_H
 
+#include "d3dUtil.h"
+
 struct FULL_VERTEX {
     D3DXVECTOR3 position;
     D3DXVECTOR3 normal;
@@ -14,28 +16,19 @@ struct FULL_VERTEX {
     D3DXCOLOR blendWeight6;
 };
 
-struct Color {
-  float r;
-  float g;
-  float b;
-  float a;
-
-  bool operator() (Color c1, Color c2) {
-    return (c1.r < c2.r ||
-            c1.r == c2.r && c1.g < c2.g  ||
-            c1.r == c2.r && c1.g == c2.g && c1.b < c2.b);
-  }
-};
-
 struct Vertex {
-  float x;
-  float y;
-  float z;
+  D3DXVECTOR3 pos;
+  D3DXVECTOR3 normal;
+  D3DXCOLOR color;
 
   bool operator() (Vertex v1, Vertex v2) {
-    return (v1.x < v2.x ||
-            v1.x == v2.x && v1.y < v2.y  ||
-            v1.x == v2.x && v1.y == v2.y && v1.z < v2.z);
+    return (
+      v1.pos.x < v2.pos.x ||
+      v1.pos.x == v2.pos.x && v1.pos.y < v2.pos.y  ||
+      v1.pos.x == v2.pos.x && v1.pos.y == v2.pos.y && v1.pos.z < v2.pos.z ||
+      v1.pos.x == v2.pos.x && v1.pos.y == v2.pos.y && v1.pos.z == v2.pos.z && v1.normal.x < v2.normal.x ||
+      v1.pos.x == v2.pos.x && v1.pos.y == v2.pos.y && v1.pos.z == v2.pos.z && v1.normal.x == v2.normal.x  && v1.normal.y < v2.normal.y ||
+      v1.pos.x == v2.pos.x && v1.pos.y == v2.pos.y && v1.pos.z == v2.pos.z && v1.normal.x == v2.normal.x  && v1.normal.y == v2.normal.y && v1.normal.z < v2.normal.z);
   }
 };
 

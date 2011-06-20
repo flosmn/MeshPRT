@@ -152,12 +152,13 @@ HRESULT MeshPRT::Init(ID3DXMesh* mesh) {
   if(FAILED(hr)) return hr;
 
   mPRTHierarchy = new PRTHierarchy(gd3dDevice);
-  mPRTHierarchy->LoadMeshHierarchy(L"bigship1",
-                                   L"bigship1",
+  mPRTHierarchy->LoadMeshHierarchy(L"bimba_d",
+                                   L"bimba_e",
                                    L"models/",
                                    L".x",
                                    order);
-    
+
+  mPRTHierarchy->ScaleMeshes();    
   mPRTHierarchy->CalculateSHCoefficients(mCubeMap);
   mPRTHierarchy->CalculateDiffuseColor();
   mPRTHierarchy->LoadEffect(mFX);

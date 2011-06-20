@@ -36,6 +36,10 @@ public:
   void SetName(WCHAR* _name) { name = _name; } 
   WCHAR* GetName() { return name; }
 
+  void SetWorldTransform(D3DXMATRIX* matrix) {
+    mWorld = *matrix;
+  }
+
   IDirect3DTexture9* GetTextures() { return mTextures[0]; }
   bool HasTextures() { return hasTextures; }
 

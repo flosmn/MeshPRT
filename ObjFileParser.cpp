@@ -60,9 +60,9 @@ void ObjFileParser::ParseVertex(std::vector<std::string> tokens,
     ss.clear();
   }
 
-  vertex.x = coords[0];
-  vertex.y = coords[1];
-  vertex.z = coords[2];
+  vertex.pos.x = coords[0];
+  vertex.pos.y = coords[1];
+  vertex.pos.z = coords[2];
   
   vertices.push_back(vertex);
 

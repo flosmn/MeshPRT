@@ -58,6 +58,14 @@ void PD(const WCHAR* wchar, float f){
   OutputDebugString(L"\n");
 }
 
+void PD(const WCHAR* wchar, double f){
+  std::wstringstream sstream;
+  sstream << f;
+  OutputDebugString(wchar);
+  OutputDebugString(sstream.str().c_str());
+  OutputDebugString(L"\n");
+}
+
 void PD(const WCHAR* wchar, int i){
   std::wstringstream sstream;
   sstream << i;

@@ -107,9 +107,9 @@ HRESULT XFileCreator::CreateMesh(std::vector<Vertex> vertices,
   if(FAILED(hr)) return hr;
 
   for ( DWORD i = 0; i < numVertices; ++i ) {
-    pVertices[i].pos = D3DXVECTOR3(vertices[i].x,
-                                   vertices[i].y,
-                                   vertices[i].z);
+    pVertices[i].pos = D3DXVECTOR3(vertices[i].pos.x,
+                                   vertices[i].pos.y,
+                                   vertices[i].pos.z);
   }
 
   hr = mMesh->UnlockVertexBuffer();
