@@ -12,6 +12,7 @@ PRTHierarchy::PRTHierarchy(IDirect3DDevice9 *device) {
 
   mRenderMesh = 0;
   mApproxMesh = 0;
+  mLightSource = 0;
   mPRTEngine = 0;
   mPRTHierarchyMapping = 0;
   mOrder = 0;
@@ -92,6 +93,8 @@ HRESULT PRTHierarchy::ScaleMeshes() {
 
 HRESULT PRTHierarchy::CalculateSHCoefficients(LightSource* lightSource) {
   HRESULT hr;
+
+  mLightSource = lightSource;
   
   mTimer->Start();
   hr = mPRTEngine->CalculateSHCoefficients(mApproxMesh);
@@ -108,18 +111,6 @@ HRESULT PRTHierarchy::CalculateSHCoefficients(LightSource* lightSource) {
   hr = lightSource->CalculateSHCoefficients(mOrder);
   PD(hr, L"calculate coefficients for lightsource");
   if(FAILED(hr)) return hr;
-
-  mTimer->Start();
-  hr = mPRTEngine->ConvoluteSHCoefficients(mApproxMesh, lightSource);
-  PD(hr, L"convolute coefficients of approx mesh and lightsource");
-  if(FAILED(hr)) return hr;
-  mTimer->Stop(L"convolute coefficients of approx mesh and lightsource"); 
-
-  mTimer->Start();
-  hr = mPRTEngine->ConvoluteSHCoefficients(mRenderMesh, lightSource);
-  PD(hr, L"convolute coefficients of render mesh and lightsource");
-  if(FAILED(hr)) return hr;
-  mTimer->Stop(L"convolute coefficients of render mesh and lightsource"); 
   
   return D3D_OK;
 }
@@ -127,7 +118,7 @@ HRESULT PRTHierarchy::CalculateSHCoefficients(LightSource* lightSource) {
 HRESULT PRTHierarchy::CalculateDiffuseColor() {
   HRESULT hr;
 
-  hr = mPRTEngine->CalculateDiffuseColor(mRenderMesh);
+  hr = mPRTEngine->CalculateDiffuseColor(mRenderMesh, mLightSource);
   PD(hr, L"calculate diffuse color for render mesh");
   if(FAILED(hr)) return hr;
 
@@ -135,7 +126,7 @@ HRESULT PRTHierarchy::CalculateDiffuseColor() {
   PD(hr, L"fill render mesh vertex color vector with exact colors");
   if(FAILED(hr)) return hr;
 
-  hr = mPRTEngine->CalculateDiffuseColor(mApproxMesh);
+  hr = mPRTEngine->CalculateDiffuseColor(mApproxMesh, mLightSource);
   PD(hr, L"calculate diffuse color for approx mesh");
   if(FAILED(hr)) return hr;
 
@@ -168,15 +159,13 @@ HRESULT PRTHierarchy::CalculateDiffuseColor() {
 HRESULT PRTHierarchy::UpdateLighting(LightSource* lightSource) {
   HRESULT hr;
   
+  mLightSource = lightSource;
+
   hr = lightSource->CalculateSHCoefficients(mOrder);
   PD(hr, L"calculate coefficients for lightsource");
   if(FAILED(hr)) return hr;
 
-  hr = mPRTEngine->ConvoluteSHCoefficients(mApproxMesh, lightSource);
-  PD(hr, L"convolute coefficients of approx mesh and lightsource");
-  if(FAILED(hr)) return hr;
-
-  hr = mPRTEngine->CalculateDiffuseColor(mApproxMesh);
+  hr = mPRTEngine->CalculateDiffuseColor(mApproxMesh, mLightSource);
   PD(hr, L"calculate diffuse color for approx mesh");
   if(FAILED(hr)) return hr;
 

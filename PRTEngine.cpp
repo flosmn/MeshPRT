@@ -44,10 +44,13 @@ HRESULT PRTEngine::CalculateSHCoefficients(Mesh* mesh) {
   PD(mPRTEngine->SetMeshMaterials( getMeshMaterial(mesh), dwNumMeshes, mNumChannels, !hasTextures, mLengthScale), L"set mesh materials" );
 
   //check if compbuffer already exists
-  WCHAR* bufferfile = Concat(mesh->GetName(), L".compbuffer");
+  WCHAR* compbufferfile = Concat(mesh->GetName(), L".compbuffer");
+  WCHAR* compbufferpath = Concat(mesh->GetDirectory(), compbufferfile);
+  WCHAR* bufferfile = Concat(mesh->GetName(), L".buffer");
   WCHAR* bufferpath = Concat(mesh->GetDirectory(), bufferfile);
 
-  hr = D3DXLoadPRTCompBufferFromFile(AppendToRootDir(bufferpath), &compPRTBuffer);
+
+  hr = D3DXLoadPRTCompBufferFromFile(AppendToRootDir(compbufferpath), &compPRTBuffer);
 
   if(FAILED(hr)) {
     PD(D3DXCreatePRTBuffer( dwNumSamples, mOrder * mOrder, mNumChannels, &pDataTotal ), L"create prt buffer");
@@ -71,13 +74,17 @@ HRESULT PRTEngine::CalculateSHCoefficients(Mesh* mesh) {
     PD(hr, L"compute second bounce");
     if(FAILED(hr)) return hr;
    
-    hr = D3DXCreatePRTCompBuffer( D3DXSHCQUAL_SLOWHIGHQUALITY, 1, mNumPCA, NULL,
+    hr = D3DXCreatePRTCompBuffer( D3DXSHCQUAL_FASTLOWQUALITY, 1, mNumPCA, NULL,
                                 NULL, pDataTotal, &compPRTBuffer );
     PD(hr, L"create compressed prt buffer");
     if(FAILED(hr)) return hr;
   
-    hr = D3DXSavePRTCompBufferToFile( AppendToRootDir(bufferpath), compPRTBuffer );
+    hr = D3DXSavePRTCompBufferToFile( AppendToRootDir(compbufferpath), compPRTBuffer );
     PD(hr, L"save compressed prt buffer to file");
+    if(FAILED(hr)) return hr;
+
+    hr = D3DXSavePRTBufferToFile( AppendToRootDir(bufferpath), pDataTotal );
+    PD(hr, L"save prt buffer to file");
     if(FAILED(hr)) return hr;
   }
   
@@ -110,6 +117,21 @@ HRESULT PRTEngine::CalculateSHCoefficients(Mesh* mesh) {
 
   PD( compPRTBuffer->ExtractToMesh( mNumPCA, D3DDECLUSAGE_BLENDWEIGHT, 1, mesh->GetMesh() ), L"extract to mesh" );
    
+  UINT numCoeffs = mesh->GetPRTCompBuffer()->GetNumCoeffs();
+  UINT numClusters = mesh->GetPRTCompBuffer()->GetNumClusters();
+  int nClusterBasisSize = ( mNumPCA + 1 ) * numCoeffs * mNumChannels;  // mean + pca-basis vectors of cluster
+  int nBufferSize = nClusterBasisSize * numClusters;
+  
+  float* PRTClusterBases = new float[nBufferSize];
+  for( DWORD iCluster = 0; iCluster < numClusters; iCluster++ ) {
+    hr = mesh->GetPRTCompBuffer()->ExtractBasis( iCluster, &PRTClusterBases[iCluster * nClusterBasisSize] );
+
+    PD(hr, L"extract basis");
+    if(FAILED(hr)) return hr;
+  }
+
+  mesh->SetPRTClusterBases(PRTClusterBases);
+
   ReleaseCOM( mPRTEngine );
   ReleaseCOM( pBufferA );
   ReleaseCOM( pBufferB );
@@ -124,7 +146,7 @@ After the call of this function the precomputed diffuse color will be stored
 at the vertex data position blendweight1 (see FULL_VERTEX structure). 
 Previously stored data on this position will be overwritten (PCAWeights). 
 */
-HRESULT PRTEngine::CalculateDiffuseColor(Mesh* mesh) {
+HRESULT PRTEngine::CalculateDiffuseColor(Mesh* mesh, LightSource* light) {
   HRESULT hr;
 
   /* 
@@ -145,6 +167,9 @@ HRESULT PRTEngine::CalculateDiffuseColor(Mesh* mesh) {
   PD(hr, L"lock vertex buffer");
   if(FAILED(hr)) return hr;
 
+  DWORD numCoeffs = compPRTBuffer->GetNumCoeffs();
+  DWORD numChannels = compPRTBuffer->GetNumChannels();
+
   for( UINT i = 0; i < mesh->GetNumVertices(); i++ )
   {
     int clusterID = pVertexBuffer[i].clusterID;
@@ -153,7 +178,12 @@ HRESULT PRTEngine::CalculateDiffuseColor(Mesh* mesh) {
     D3DXCOLOR diffuseColor = GetPrecomputedDiffuseColor(clusterID, 
                                                         pPCAWeights,
                                                         mNumPCA,
-                                                        mesh->GetPRTConstants());
+                                                        numCoeffs,
+                                                        numChannels,
+                                                        mesh->GetPRTClusterBases(),
+                                                        light->GetSHCoeffsRed(),
+                                                        light->GetSHCoeffsGreen(),
+                                                        light->GetSHCoeffsBlue());
     
     pVertexBuffer[i].blendWeight1 = diffuseColor;
   }
@@ -165,85 +195,42 @@ HRESULT PRTEngine::CalculateDiffuseColor(Mesh* mesh) {
 }
 
 /*
-calculates the diffuse color for a cluster according to the PCAWeights of a
+calculates the diffuse color for a vertex according to the PCAWeights of that
 vertex and the basis vectors of the cluster.
 */
 D3DXCOLOR PRTEngine::GetPrecomputedDiffuseColor( int clusterID, 
                                                  float *vPCAWeights, 
-                                                 DWORD numPCA, 
-                                                 float *PRTConstants)
+                                                 DWORD numPCA,
+                                                 int numCoeffs,
+                                                 int numChannels,
+                                                 float* prtClusterBases,
+                                                 float* redLightCoeff,
+                                                 float* greenLightCoeff,
+                                                 float* blueLightCoeff)
 {         
-    float vAccumR = 0.0f;
-    float vAccumG = 0.0f;
-    float vAccumB = 0.0f;
-    
-    for (DWORD j = 0; j < numPCA; j++) 
-    {
-        int redRegionOffset = clusterID+4+numPCA*0;
-        int greenRegionOffset = clusterID+4+numPCA*1;
-        int blueRegionOffset = clusterID+4+numPCA*2;
-        vAccumR += vPCAWeights[j] * PRTConstants[redRegionOffset+j];
-        vAccumG += vPCAWeights[j] * PRTConstants[greenRegionOffset+j];
-        vAccumB += vPCAWeights[j] * PRTConstants[blueRegionOffset+j];
-    }    
-
-    D3DXCOLOR vDiffuse;
-    vDiffuse.r = PRTConstants[clusterID+0];
-    vDiffuse.g = PRTConstants[clusterID+1];
-    vDiffuse.b = PRTConstants[clusterID+2];
-    vDiffuse.a = PRTConstants[clusterID+3];
-
-    vDiffuse.r += vAccumR;
-    vDiffuse.g += vAccumG;
-    vDiffuse.b += vAccumB;
-    
-    return vDiffuse;
-}
-
-HRESULT PRTEngine::ConvoluteSHCoefficients(Mesh* mesh, LightSource* lightSource) {
-  HRESULT hr; 
-
-  UINT numCoeffs = mesh->GetPRTCompBuffer()->GetNumCoeffs();
-  UINT numClusters = mesh->GetPRTCompBuffer()->GetNumClusters();
+  DWORD dwClusterStride = numChannels * numPCA + 4;
+  DWORD dwBasisStride = numCoeffs * numChannels * ( numPCA + 1 );
   
-  int nClusterBasisSize = ( mNumPCA + 1 ) * numCoeffs * mNumChannels;
-  int nBufferSize = nClusterBasisSize * numClusters;
+  float vAccumR = D3DXSHDot( mOrder, &prtClusterBases[clusterID * dwBasisStride + 0 * numCoeffs], redLightCoeff );
+  float vAccumG = D3DXSHDot( mOrder, &prtClusterBases[clusterID * dwBasisStride + 1 * numCoeffs], greenLightCoeff);
+  float vAccumB = D3DXSHDot( mOrder, &prtClusterBases[clusterID * dwBasisStride + 2 * numCoeffs], blueLightCoeff );
+  
+  for(int i = 0; i < mNumPCA; ++i) {
+      int nOffset = clusterID * dwBasisStride + ( i + 1 ) * numCoeffs * mNumChannels;
 
-  float* PRTClusterBases = new float[nBufferSize];
-
-  float* PRTConstants = new float[numClusters * ( 4 + mNumChannels * mNumPCA )];
-
-  for( DWORD iCluster = 0; iCluster < numClusters; iCluster++ ) {
-    hr = mesh->GetPRTCompBuffer()->ExtractBasis( iCluster, &PRTClusterBases[iCluster * nClusterBasisSize] );
-
-    PD(hr, L"extract basis");
-    if(FAILED(hr)) return hr;
+      vAccumR += vPCAWeights[i] * D3DXSHDot( mOrder, &prtClusterBases[nOffset + 0 * numCoeffs], redLightCoeff );
+      vAccumG += vPCAWeights[i] * D3DXSHDot( mOrder, &prtClusterBases[nOffset + 1 * numCoeffs], greenLightCoeff );
+      vAccumB += vPCAWeights[i] * D3DXSHDot( mOrder, &prtClusterBases[nOffset + 2 * numCoeffs], blueLightCoeff );
   }
   
-  DWORD dwClusterStride = mNumChannels * mNumPCA + 4;
-  DWORD dwBasisStride = numCoeffs * mNumChannels * ( mNumPCA + 1 );
-  
-  for( DWORD iCluster = 0; iCluster < numClusters; iCluster++ )  {
-    PRTConstants[iCluster * dwClusterStride + 0] = D3DXSHDot( mOrder, &PRTClusterBases[iCluster * dwBasisStride + 0 * numCoeffs], lightSource->GetSHCoeffsRed() );
-    PRTConstants[iCluster * dwClusterStride + 1] = D3DXSHDot( mOrder, &PRTClusterBases[iCluster * dwBasisStride + 1 * numCoeffs], lightSource->GetSHCoeffsGreen() );
-    PRTConstants[iCluster * dwClusterStride + 2] = D3DXSHDot( mOrder, &PRTClusterBases[iCluster * dwBasisStride + 2 * numCoeffs], lightSource->GetSHCoeffsBlue() );
-    PRTConstants[iCluster * dwClusterStride + 3] = 0.0f;
-
-    float* pPCAStart = &PRTConstants[iCluster * dwClusterStride + 4];
-    for( DWORD iPCA = 0; iPCA < mNumPCA; iPCA++ ) {
-      int nOffset = iCluster * dwBasisStride + ( iPCA + 1 ) * numCoeffs * mNumChannels;
-
-      pPCAStart[0 * mNumPCA + iPCA] = D3DXSHDot( mOrder, &PRTClusterBases[nOffset + 0 * numCoeffs], lightSource->GetSHCoeffsRed() );
-      pPCAStart[1 * mNumPCA + iPCA] = D3DXSHDot( mOrder, &PRTClusterBases[nOffset + 1 * numCoeffs], lightSource->GetSHCoeffsGreen() );
-      pPCAStart[2 * mNumPCA + iPCA] = D3DXSHDot( mOrder, &PRTClusterBases[nOffset + 2 * numCoeffs], lightSource->GetSHCoeffsBlue() );
-    }
-  }
-
-  delete [] PRTClusterBases;
-
-  mesh->SetPRTConstants(PRTConstants);
-  
-  return D3D_OK;
+  D3DXCOLOR vDiffuse;
+  vDiffuse.r = vAccumR;
+  vDiffuse.g = vAccumG;
+  vDiffuse.b = vAccumB;
+  vDiffuse.a = 1.0f;
+    
+    
+  return vDiffuse;
 }
 
 const D3DXSHMATERIAL** PRTEngine::getMeshMaterial(Mesh *mesh) {

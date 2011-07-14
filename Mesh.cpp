@@ -8,7 +8,8 @@ Mesh::Mesh(IDirect3DDevice9 *device)
 {
   mMaterialBuffer = 0;
   mNumMaterials = 0;
-  mPRTConstants = 0;
+  mPRTClusterBases = 0;
+  mPRTCompBuffer = 0;
   hasTextures = false;
   mMesh = 0;  
   mRotationX = 0;
@@ -90,11 +91,11 @@ void Mesh::DrawMesh()
   }
 }
 
-void Mesh::SetPRTConstants(float* prtConstants) { 
-  if(mPRTConstants != 0){
-    delete [] mPRTConstants;
+void Mesh::SetPRTClusterBases(float* prtClusterBases) { 
+  if(mPRTClusterBases != 0){
+    delete [] mPRTClusterBases;
   }
-  mPRTConstants = prtConstants;
+  mPRTClusterBases = prtClusterBases;
 }
 
 DWORD Mesh::GetNumFaces() 
@@ -206,7 +207,7 @@ HRESULT Mesh::LoadMesh(WCHAR* directory, WCHAR* name, WCHAR* extension)
                           D3DXMESH_MANAGED | D3DXMESH_32BIT, mDevice, NULL, 
                           &mMaterialBuffer, NULL, &mNumMaterials, &mMesh );
   
-  PD(hr, L"mesh mesh from file");
+  PD(hr, L"load mesh from file");
   if(FAILED(hr)) return hr;
 
   mMaterials = (D3DXMATERIAL*)mMaterialBuffer->GetBufferPointer();

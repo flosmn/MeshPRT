@@ -70,7 +70,8 @@ bool StartDirectX(ID3DXMesh* mesh) {
   return gd3dApp->run();
 }
 
-MeshPRT::MeshPRT( std::string winCaption, ID3DXMesh* mesh, D3DDEVTYPE devType, DWORD requestedVP )
+MeshPRT::MeshPRT( std::string winCaption, ID3DXMesh* mesh, D3DDEVTYPE devType,
+                  DWORD requestedVP )
   : D3DApp(winCaption, devType, requestedVP)
 {
   mPRTHierarchy = 0;
@@ -81,7 +82,7 @@ MeshPRT::MeshPRT( std::string winCaption, ID3DXMesh* mesh, D3DDEVTYPE devType, D
     PostQuitMessage(0);
   }
   
-  visualizeError = true;
+  visualizeError = false;
   initialized = false;
 
   HRESULT hr = Init(mesh);
@@ -153,8 +154,8 @@ HRESULT MeshPRT::Init(ID3DXMesh* mesh) {
   if(FAILED(hr)) return hr;
 
   mPRTHierarchy = new PRTHierarchy(gd3dDevice);
-  mPRTHierarchy->LoadMeshHierarchy(L"bimba_d",
-                                   L"bigship1",
+  mPRTHierarchy->LoadMeshHierarchy(L"bimba_e",
+                                   L"bimba_d",
                                    L"models/",
                                    L".x",
                                    order);

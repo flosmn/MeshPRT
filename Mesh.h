@@ -25,8 +25,8 @@ public:
   void SetPRTCompBuffer(ID3DXPRTCompBuffer* compBuffer) { mPRTCompBuffer = compBuffer; }
   ID3DXPRTCompBuffer* GetPRTCompBuffer() { return mPRTCompBuffer; }
   
-  void SetPRTConstants(float* prtConstants);
-  float* GetPRTConstants() { return mPRTConstants; }
+  void SetPRTClusterBases(float* prtClusterBases);
+  float* GetPRTClusterBases() { return mPRTClusterBases; }
   
   D3DXCOLOR GetDiffuseMaterial(int i);
 
@@ -73,7 +73,7 @@ protected:
   D3DXHANDLE   mhWorldInverseTranspose;
     
   ID3DXPRTCompBuffer* mPRTCompBuffer;
-  float* mPRTConstants;
+  float* mPRTClusterBases;
 
   WCHAR* directory;
   WCHAR* name;
