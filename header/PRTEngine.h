@@ -11,7 +11,8 @@ public:
   virtual ~PRTEngine();
 
   HRESULT CalculateSHCoefficients(Mesh*);
-  HRESULT CalculateDiffuseColor(Mesh* mesh, LightSource* light);
+  HRESULT ConvoluteSHCoefficients(Mesh* mesh, LightSource* lightSource);
+  HRESULT CalculateDiffuseColor(Mesh* mesh);
   
   void InitMeshMaterial(Mesh *mesh, DWORD numMeshes,
                         D3DXSHMATERIAL* material, 
@@ -21,16 +22,8 @@ public:
                                float* pSHCoeffsBlue, Mesh* mesh );
   
   
-  // this will be on the GPU
-  D3DXCOLOR GetPrecomputedDiffuseColor( int clusterID, 
-                                                 float *vPCAWeights, 
-                                                 DWORD numPCA,
-                                                 int numCoeffs,
-                                                 int numChannels,
-                                                 float* prtClusterBases,
-                                                 float* redLightCoeff,
-                                                 float* greenLightCoeff,
-                                                 float* blueLightCoeff);
+  D3DXCOLOR GetPrecomputedDiffuseColor( int iClusterOffset, float *vPCAWeights, 
+                                        DWORD numPCA, float *PRTConstants);
   
   DWORD getOrder() { return mOrder; }
 

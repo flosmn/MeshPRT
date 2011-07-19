@@ -64,8 +64,12 @@ bool StartDirectX() {
   return gd3dApp->run();
 }
 
+<<<<<<< HEAD
 MeshPRT::MeshPRT( std::string winCaption, D3DDEVTYPE devType,
                   DWORD requestedVP )
+=======
+MeshPRT::MeshPRT( std::string winCaption, ID3DXMesh* mesh, D3DDEVTYPE devType, DWORD requestedVP )
+>>>>>>> parent of e1520b3... clean up code
   : D3DApp(winCaption, devType, requestedVP)
 {
   mGfxStats = 0;
@@ -80,8 +84,13 @@ MeshPRT::MeshPRT( std::string winCaption, D3DDEVTYPE devType,
     MessageBox(0, L"checkDeviceCaps() Failed", 0, 0);
     PostQuitMessage(0);
   }
+<<<<<<< HEAD
 
   visualizeError = false;
+=======
+  
+  visualizeError = true;
+>>>>>>> parent of e1520b3... clean up code
   initialized = false;
 
   HRESULT hr = Init();
@@ -155,7 +164,11 @@ HRESULT MeshPRT::Init() {
   if(FAILED(hr)) return hr;
 
   mPRTHierarchy = new PRTHierarchy(gd3dDevice);
+<<<<<<< HEAD
   mPRTHierarchy->LoadMeshHierarchy(L"bigship1",
+=======
+  mPRTHierarchy->LoadMeshHierarchy(L"bimba_d",
+>>>>>>> parent of e1520b3... clean up code
                                    L"bigship1",
                                    L"models/",
                                    L".x",

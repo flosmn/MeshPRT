@@ -44,7 +44,6 @@ private:
   IDirect3DDevice9 *mDevice;
   Mesh* mRenderMesh;
   Mesh* mApproxMesh;
-  LightSource* mLightSource;
   PRTEngine* mPRTEngine;
   PRTHierarchyMapping* mPRTHierarchyMapping;
 

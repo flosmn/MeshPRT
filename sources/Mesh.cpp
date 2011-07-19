@@ -8,12 +8,16 @@ Mesh::Mesh(IDirect3DDevice9 *device)
 {
   mMaterialBuffer = 0;
   mNumMaterials = 0;
+<<<<<<< HEAD
   mPRTClusterBases = 0;
   mPRTCompBuffer = 0;
   mPCAWeights = 0;
   mSHCoefficients = 0;
   mClusterIds = 0;
 
+=======
+  mPRTConstants = 0;
+>>>>>>> parent of e1520b3... clean up code
   hasTextures = false;
   mMesh = 0;  
   mRotationX = 0;
@@ -95,9 +99,17 @@ void Mesh::DrawMesh()
   }
 }
 
+<<<<<<< HEAD
 void Mesh::SetPRTClusterBases(float* prtClusterBases) { 
   SAFE_DELETE_ARRAY(mPRTClusterBases)
   mPRTClusterBases = prtClusterBases;
+=======
+void Mesh::SetPRTConstants(float* prtConstants) { 
+  if(mPRTConstants != 0){
+    delete [] mPRTConstants;
+  }
+  mPRTConstants = prtConstants;
+>>>>>>> parent of e1520b3... clean up code
 }
 
 void Mesh::SetPcaWeights(float* pcaWeights) { 
@@ -228,7 +240,7 @@ HRESULT Mesh::LoadMesh(WCHAR* directory, WCHAR* name, WCHAR* extension)
                           D3DXMESH_MANAGED | D3DXMESH_32BIT, mDevice, NULL, 
                           &mMaterialBuffer, NULL, &mNumMaterials, &mMesh );
   
-  PD(hr, L"load mesh from file");
+  PD(hr, L"mesh mesh from file");
   if(FAILED(hr)) return hr;
 
   mMaterials = (D3DXMATERIAL*)mMaterialBuffer->GetBufferPointer();
