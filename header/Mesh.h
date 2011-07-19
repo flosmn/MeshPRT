@@ -28,7 +28,6 @@ public:
 
   ID3DXPRTCompBuffer* GetPRTCompBuffer() { return mPRTCompBuffer; }
   
-<<<<<<< HEAD
   void SetPRTClusterBases(float* prtClusterBases);
   float* GetPRTClusterBases() { return mPRTClusterBases; }
 
@@ -40,10 +39,6 @@ public:
 
   void SetSHCoefficients(float* shCoefficients);
   float* GetSHCoefficients() { return mSHCoefficients; }
-=======
-  void SetPRTConstants(float* prtConstants);
-  float* GetPRTConstants() { return mPRTConstants; }
->>>>>>> parent of e1520b3... clean up code
   
   D3DXCOLOR GetDiffuseMaterial(int i);
 
@@ -90,14 +85,10 @@ protected:
   D3DXHANDLE   mhWorldInverseTranspose;
     
   ID3DXPRTCompBuffer* mPRTCompBuffer;
-<<<<<<< HEAD
   float* mPRTClusterBases;
   float* mPCAWeights;
   float* mSHCoefficients;
   UINT* mClusterIds;
-=======
-  float* mPRTConstants;
->>>>>>> parent of e1520b3... clean up code
 
   WCHAR* directory;
   WCHAR* name;

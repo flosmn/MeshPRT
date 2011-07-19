@@ -22,10 +22,6 @@
 
 #include "LocalConfig.h"
 
-#pragma comment(lib, "dxerr.lib")
-#pragma comment(lib, "d3d9.lib")
-#pragma comment(lib, "d3dx9.lib")
-
 //===============================================================
 // Globals for convenient access.
 class D3DApp;
