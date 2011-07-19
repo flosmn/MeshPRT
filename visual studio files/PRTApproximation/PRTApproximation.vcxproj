@@ -1,0 +1,117 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\sources\Camera.cpp" />
+    <ClCompile Include="..\..\sources\CubeMap.cpp" />
+    <ClCompile Include="..\..\sources\d3dApp.cpp" />
+    <ClCompile Include="..\..\sources\d3dUtil.cpp" />
+    <ClCompile Include="..\..\sources\DirectInput.cpp" />
+    <ClCompile Include="..\..\sources\GfxStats.cpp" />
+    <ClCompile Include="..\..\sources\K3Tree.cpp" />
+    <ClCompile Include="..\..\sources\Light.cpp" />
+    <ClCompile Include="..\..\sources\Mesh.cpp" />
+    <ClCompile Include="..\..\sources\MeshPRT.cpp" />
+    <ClCompile Include="..\..\sources\ObjFileParser.cpp" />
+    <ClCompile Include="..\..\sources\PRTEngine.cpp" />
+    <ClCompile Include="..\..\sources\PRTHierarchy.cpp" />
+    <ClCompile Include="..\..\sources\PRTHierarchyMapping.cpp" />
+    <ClCompile Include="..\..\sources\Timer.cpp" />
+    <ClCompile Include="..\..\sources\Window.cpp" />
+    <ClCompile Include="..\..\sources\XFileCreator.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\shader\cubemap.fx" />
+    <None Include="..\..\shader\diffuse.fx" />
+    <None Include="..\..\shader\errorVisualization.fx" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\header\Camera.h" />
+    <ClInclude Include="..\..\header\CubeMap.h" />
+    <ClInclude Include="..\..\header\d3dApp.h" />
+    <ClInclude Include="..\..\header\d3dUtil.h" />
+    <ClInclude Include="..\..\header\DirectInput.h" />
+    <ClInclude Include="..\..\header\GfxStats.h" />
+    <ClInclude Include="..\..\header\K3Tree.h" />
+    <ClInclude Include="..\..\header\kdtree.h" />
+    <ClInclude Include="..\..\header\Light.h" />
+    <ClInclude Include="..\..\header\LightSource.h" />
+    <ClInclude Include="..\..\header\LocalConfig.h" />
+    <ClInclude Include="..\..\header\Mesh.h" />
+    <ClInclude Include="..\..\header\MeshDatastructures.h" />
+    <ClInclude Include="..\..\header\ObjFileParser.h" />
+    <ClInclude Include="..\..\header\PRTEngine.h" />
+    <ClInclude Include="..\..\header\PRTHierarchy.h" />
+    <ClInclude Include="..\..\header\PRTHierarchyMapping.h" />
+    <ClInclude Include="..\..\header\SimpleK3Tree.h" />
+    <ClInclude Include="..\..\header\Timer.h" />
+    <ClInclude Include="..\..\header\Window.h" />
+    <ClInclude Include="..\..\header\XFileCreator.h" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{7E7C8EE3-B948-41B7-A2E9-54A6C7F3CCF8}</ProjectGuid>
+    <RootNamespace>PRTApproximation</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LibraryPath>C:\Users\flosmn\Desktop\filter_prtapprox\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\Users\flosmn\Desktop\filter_prtapprox\header;$(IncludePath)</IncludePath>
+    <SourcePath>$(SourcePath)</SourcePath>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>C:\Program Files %28x86%29\Microsoft DirectX SDK %28June 2010%29\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
