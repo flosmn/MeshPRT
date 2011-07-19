@@ -43,3 +43,6 @@ Thumbs.db
 
 MeshLabPRT/MeshLabPRT.sdf
 MeshLabPRT/MeshLabPRT.opensdf
+
+*.compbuffer
+*.buffer
