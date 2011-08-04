@@ -7,6 +7,7 @@
 #include "PRTHierarchyMapping.h"
 #include "LightSource.h"
 #include "Timer.h"
+#include "NNMapping.h"
 
 
 class PRTHierarchy{
@@ -17,13 +18,21 @@ public:
   HRESULT LoadMeshHierarchy(WCHAR* renderMeshFile, WCHAR* approxMeshFile, 
                             WCHAR* directory, WCHAR* extension, DWORD order);
 
-  HRESULT CalculateSHCoefficients(LightSource *lightSource);
+  HRESULT CalculateSHCoefficients();
 
-  HRESULT CalculateDiffuseColor();
+  HRESULT CalculateNNMapping(DWORD numberOfNearestNeightbours);
+
+	HRESULT InterpolateSHCoefficients(DWORD numberOfNearestNeightbours);
+
+  HRESULT TransferSHDataToGPU(DWORD numberOfNearestNeightbours, bool interpolate);
 
   HRESULT UpdateLighting(LightSource* lightSource);
 
   HRESULT ScaleMeshes();
+
+  HRESULT CheckColor(LightSource* lightSource);
+
+	void UpdateState(bool visualizeError, bool interpolate, DWORD numNN);
 
   bool HasTextures();
   void DrawMesh();
@@ -31,20 +40,17 @@ public:
   int GetNumVertices();
   int GetNumFaces();
 
+  Mesh* GetRenderMesh() { return mRenderMesh; }
+  Mesh* GetApproxMesh() { return mApproxMesh; }
+
 private:
   HRESULT FillVertexVectors();  
-  HRESULT FillColorVector(std::vector<D3DXCOLOR> &colors, Mesh* mesh);
   HRESULT FillVertexVector(std::vector<Vertex> &vec, Mesh* mesh);
-  HRESULT SetRenderMeshVertexColors();
-
-  void FillWithRandomColors(std::vector<D3DXCOLOR> &colors);
-
-  D3DXCOLOR GenerateRandomColor();
-
+    
   IDirect3DDevice9 *mDevice;
+  ID3DXEffect* mEffect;
   Mesh* mRenderMesh;
   Mesh* mApproxMesh;
-  LightSource* mLightSource;
   PRTEngine* mPRTEngine;
   PRTHierarchyMapping* mPRTHierarchyMapping;
 
@@ -54,13 +60,9 @@ private:
   std::vector<Vertex> mApproxMeshVertices;
   std::vector<D3DXVECTOR3> mRenderMeshVertexNormals;
   std::vector<D3DXVECTOR3> mApproxMeshVertexNormals;
-  std::vector<D3DXCOLOR> mRenderMeshVertexColors;
-  std::vector<D3DXCOLOR> mRenderMeshVertexColorsExact;
-  std::vector<D3DXCOLOR> mApproxMeshVertexColors;
     
   DWORD mOrder;
-  bool mVisualizeMapping;
-
+  
   D3DXMATRIX mWorldTransform;
 };
 

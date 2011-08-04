@@ -30,22 +30,52 @@ void PRTHierarchyMapping::NearestNeighbourMappingNaive(
 
 void PRTHierarchyMapping::NearestNeighbourMappingTree(
                      int numNN,
-                     std::vector<Vertex> approxMeshVertices,
-                     std::vector<Vertex> renderMeshVertices,
-                     std::vector<D3DXCOLOR> approxMeshVertexColors,
-                     std::vector<D3DXCOLOR> &renderMeshVertexColors)
+                     std::vector<Vertex> &approxMeshVertices,
+                     std::vector<Vertex> &renderMeshVertices,
+                     int* mappingIndices,
+										 float* mappingWeights)
 {
   mTree = new K3Tree(approxMeshVertices);
   mTree->FillTreeWithData();
   
   InitArrays(numNN);
   for(int i = 0; i < renderMeshVertices.size(); ++i) {
-    D3DXCOLOR color = GetInterpolatedColor( numNN,
-                                            renderMeshVertices[i],
-                                            &approxMeshVertices,
-                                            &approxMeshVertexColors); 
     
-    renderMeshVertexColors.push_back(color);
+		if(i == 12207) { // || i == 12217 || i == 12220 || i == 12208){
+			PD(L"debug");
+			mTree->SetDebug(true);
+		}
+		else{
+			mTree->SetDebug(false);
+		}
+		
+		Vertex vertex = renderMeshVertices[i];
+		mTree->GetNearestNeighbours(vertex, indices, weights, numNN);
+  
+		bool debug = false;
+		if(debug) PD(L"nn mapping info for vertex ", i);
+
+		float sumOfWeights = 0;
+		for(int k = 0; k < numNN; ++k) {
+			if(debug) {
+				PD(L"nn: ", k);
+				PD(L"index :", indices[k]);
+				PD(L"weights :", weights[k]);
+			}
+
+			if(abs(weights[k]) > 5.0f) {
+				PD(L"big weight for vertex with index ", i);
+				PD(L"weight: ", weights[k]);
+			}
+
+			mappingIndices[(i*numNN) + k] = indices[k];
+			mappingWeights[(i*numNN) + k] = weights[k];
+			sumOfWeights += weights[k];
+		}
+		
+		if(sumOfWeights > 1.001f || sumOfWeights < 0.999f) {
+			PD(L"sum of weights not 1");
+		}
   }
   FreeArrays();
 }
@@ -77,42 +107,6 @@ void PRTHierarchyMapping::FreeArrays() {
   delete [] nnVertices;
 }
 
-D3DXCOLOR PRTHierarchyMapping::GetInterpolatedColor(
-    int numNN,
-    Vertex vertex,
-    std::vector<Vertex> *pApproxMeshVertices,
-    std::vector<D3DXCOLOR> *pApproxMeshVertexColors)
-{
-  D3DXCOLOR color(0.0f, 0.0f, 0.0f, 0.0f);
-  
-  mTree->GetNearestNeighbours(vertex, indices, numNN);
-  
-  float totalWeight = 0;
-  for(int i = 0; i < numNN; ++i) {
-    nnVertices[i] = (*pApproxMeshVertices)[indices[i]];
-    float distance = GetDistance(vertex, nnVertices[i]);
-    
-    if(distance == 0) {
-      return (*pApproxMeshVertexColors)[indices[i]];
-    }
-    else {
-      weights[i] = 1.0f / distance;
-    }
-
-    totalWeight += weights[i];
-  }
-  
-  for(int i = 0; i < numNN; ++i) {
-    weights[i] = weights[i] / totalWeight;
-  }  
-  
-  for(int i = 0; i < numNN; ++i) {
-    color += weights[i] * (*pApproxMeshVertexColors)[indices[i]];
-  }
-  
-  return color;
-}
-
 bool PRTHierarchyMapping::Equals(Vertex v, Vertex u) {
   bool samePos = false;
   bool sameNorm = false;
@@ -132,14 +126,6 @@ bool PRTHierarchyMapping::Equals(Vertex v, Vertex u) {
   }
 
   return samePos && sameNorm;
-}
-
-
-DWORD PRTHierarchyMapping::GetNNTree(Vertex v){
-  int indices[1];
-
-  mTree->GetNearestNeighbours(v, indices, 1);
-  return indices[0];
 }
 
 float PRTHierarchyMapping::GetDistance(Vertex v, Vertex u) {

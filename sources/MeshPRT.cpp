@@ -23,7 +23,7 @@ public:
   void drawScene();
 
   // Helper methods
-  void buildFX();
+  void buildEffectFiles();
   void buildViewMtx();
   void buildProjMtx();
   
@@ -34,7 +34,10 @@ private:
     
   bool initialized;
 
-  bool visualizeError;
+	bool mVisualizeError;
+	bool mInterpolate;
+
+	DWORD mNumNN;
 
   float reflectivity;
 
@@ -43,7 +46,6 @@ private:
 
   GfxStats* mGfxStats;
   ID3DXEffect* mFX;
-  ID3DXEffect* mErrorVisFX;
   Camera *mCamera;
   CubeMap *mCubeMap;
   PRTHierarchy *mPRTHierarchy;
@@ -70,7 +72,6 @@ MeshPRT::MeshPRT( std::string winCaption, D3DDEVTYPE devType,
 {
   mGfxStats = 0;
   mFX = 0;
-  mErrorVisFX = 0;
   mCamera = 0;
   mCubeMap = 0;
   mPRTHierarchy = 0;
@@ -81,7 +82,8 @@ MeshPRT::MeshPRT( std::string winCaption, D3DDEVTYPE devType,
     PostQuitMessage(0);
   }
 
-  visualizeError = false;
+  mVisualizeError = false;
+	mInterpolate = true;
   initialized = false;
 
   HRESULT hr = Init();
@@ -102,7 +104,6 @@ MeshPRT::~MeshPRT()
   delete mCubeMap;
   delete mPRTHierarchy;
   SAFE_RELEASE(mFX)
-  SAFE_RELEASE(mErrorVisFX)
 }
 
 bool MeshPRT::checkDeviceCaps()
@@ -144,32 +145,47 @@ bool MeshPRT::IsInitialized() {
 HRESULT MeshPRT::Init() {
   HRESULT hr;
     
-  reflectivity = 0.3f;
-  DWORD order = 6;
-    
-  buildFX();
+  reflectivity = 0.0f;
 
+  // order is max 4
+  DWORD order = 3;
+  mNumNN = 3;
+    
   mCubeMap = new CubeMap(gd3dDevice);
   hr = mCubeMap->LoadCubeMap(L"cubemaps/", L"stpeters_cross", L".dds");
   PD(hr, L"load cube map");
   if(FAILED(hr)) return hr;
 
   mPRTHierarchy = new PRTHierarchy(gd3dDevice);
-  mPRTHierarchy->LoadMeshHierarchy(L"bigship1",
-                                   L"bigship1",
+  mPRTHierarchy->LoadMeshHierarchy(L"bimba_d",
+                                   L"bimba_e",
                                    L"models/",
                                    L".x",
                                    order);
 
   mPRTHierarchy->ScaleMeshes();    
-  mPRTHierarchy->CalculateSHCoefficients(mCubeMap);
-  mPRTHierarchy->CalculateDiffuseColor();
-  if(visualizeError){
-    mPRTHierarchy->LoadEffect(mErrorVisFX);
-  }
-  else{
-    mPRTHierarchy->LoadEffect(mFX);
-  }
+  hr = mPRTHierarchy->CalculateSHCoefficients();
+  PD(hr, L"ScaleMeshes");
+	if(FAILED(hr)) return hr;
+
+  // has to happen after SH calculations
+  buildEffectFiles();
+  
+	mPRTHierarchy->CalculateNNMapping(mNumNN);
+	PD(hr, L"CalculateNNMapping");
+	if(FAILED(hr)) return hr;
+  
+	mPRTHierarchy->InterpolateSHCoefficients(mNumNN);
+	PD(hr, L"InterpolateSHCoefficients");
+	if(FAILED(hr)) return hr;
+
+	mPRTHierarchy->TransferSHDataToGPU(mNumNN, mInterpolate);
+  PD(hr, L"TransferSHDataToGPU");
+	if(FAILED(hr)) return hr;
+
+	mPRTHierarchy->UpdateLighting(mCubeMap);
+
+  mPRTHierarchy->CheckColor(mCubeMap);
   
   mGfxStats = new GfxStats();
 
@@ -207,6 +223,25 @@ void MeshPRT::updateScene(float dt)
       reflectivity = 1;
     }
   }
+	
+	if( gDInput->keyDown(DIK_E) ) {
+    mVisualizeError = !mVisualizeError;
+		mPRTHierarchy->UpdateState(mVisualizeError, mInterpolate, mNumNN);
+  }
+
+	if( gDInput->keyDown(DIK_I) ) {
+		if(!mInterpolate){ 
+			mInterpolate = true;	
+			mPRTHierarchy->UpdateState(mVisualizeError, mInterpolate, mNumNN);
+		}
+  }
+
+	if( gDInput->keyDown(DIK_O) ) {
+		if(mInterpolate){ 
+			mInterpolate = false;	
+			mPRTHierarchy->UpdateState(mVisualizeError, mInterpolate, mNumNN);
+		}
+  }
 }
 
 HRESULT MeshPRT::UpdateLighting(){
@@ -223,28 +258,16 @@ void MeshPRT::drawScene()
 
   gd3dDevice->BeginScene();
 
-  ID3DXEffect* effect;
-  if(visualizeError) {
-    effect = mErrorVisFX;
-  } else {
-    effect = mFX;
-  }
+  ID3DXEffect* effect = mFX;
   D3DXHANDLE handle;
-    
   D3DXMATRIX mWVP = mCamera->view() * mProj;
   mCubeMap->DrawCubeMap(&mWVP);
   effect->SetTexture( "EnvMap", mCubeMap->GetTexture() );
     
   effect->SetBool("useTextures", mPRTHierarchy->HasTextures());
   
-  if(visualizeError){
-    handle = effect->GetTechniqueByName("ErrorVisualization");
-    effect->SetFloat( "gReflectivity", 0.0f );
-  }
-  else{
-    handle = effect->GetTechniqueByName("PRTLighting");
-    effect->SetFloat( "gReflectivity", reflectivity );
-  }
+  handle = effect->GetTechniqueByName("PRTLighting");
+  effect->SetFloat( "gReflectivity", reflectivity );
   effect->SetTechnique(handle);
     
   handle = effect->GetParameterByName(0, "gEyePosW");
@@ -272,15 +295,27 @@ void MeshPRT::drawScene()
   gd3dDevice->Present(0, 0, 0, 0);
 }
 
-void MeshPRT::buildFX()
+void MeshPRT::buildEffectFiles()
 {
-  WCHAR* effectName = L"shader/diffuse.fx";
-  LoadEffectFile(gd3dDevice, effectName, 0, D3DXSHADER_DEBUG, &mFX);
+	UINT NUM_COEFFICIENTS = mPRTHierarchy->GetRenderMesh()->GetPRTCompBuffer()->GetNumCoeffs();
+	D3DXMACRO aDefines[2];
 
-  effectName = L"shader/errorVisualization.fx";
-  LoadEffectFile(gd3dDevice, effectName, 0, D3DXSHADER_DEBUG, &mErrorVisFX);
-  
-  PD(D3D_OK, L"done building FX");
+	CHAR szMaxNumCoefficients[64];
+	sprintf_s( szMaxNumCoefficients, 64, "%d", NUM_COEFFICIENTS );
+	szMaxNumCoefficients[63] = 0;
+	
+	aDefines[0].Name = "NUM_COEFFICIENTS";
+	aDefines[0].Definition = szMaxNumCoefficients;
+	aDefines[1].Name = 0;
+	aDefines[1].Definition = 0;		
+
+	WCHAR* effectName = L"shader/diffuse.fx";
+	LoadEffectFile( gd3dDevice, effectName, aDefines, 
+					D3DXSHADER_DEBUG | D3DXSHADER_FORCE_PS_SOFTWARE_NOOPT, &mFX);
+	
+	PD(D3D_OK, L"done building FX");
+		
+	mPRTHierarchy->LoadEffect(mFX);
 }
 
 void MeshPRT::buildProjMtx()

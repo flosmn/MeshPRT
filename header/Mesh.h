@@ -2,7 +2,7 @@
 #define MESH_H
 
 #include "d3dUtil.h"
-#include "MeshDatastructures.h"
+#include "Structs.h"
 
 class Mesh
 {
@@ -22,10 +22,18 @@ public:
   DWORD GetNumVertices();
   DWORD GetNumFaces();
       
+  void InitialiseMappingDatastructures(DWORD numNN);
+  void InitialiseSHDataStructures();
+
+  HRESULT FillVertexBufferWithSHCoefficients(DWORD numNN, bool interpolate);
+
+  int* GetMappingIndices() { return mMappingIndices; }
+  float* GetMappingWeights() { return mMappingWeights; }
+
   void SetPRTCompBuffer(ID3DXPRTCompBuffer* compBuffer) { 
     mPRTCompBuffer = compBuffer;
   }
-
+  
   ID3DXPRTCompBuffer* GetPRTCompBuffer() { return mPRTCompBuffer; }
   
   void SetPRTClusterBases(float* prtClusterBases);
@@ -34,11 +42,13 @@ public:
   void SetPcaWeights(float* pcaWeights);
   float* GetPcaWeights() { return mPCAWeights; }
 
-  void SetClusterIds(UINT* clusterIds);
-  UINT* GetClusterIds() { return mClusterIds; }
+  void SetClusterIds(int* clusterIds);
+  int* GetClusterIds() { return mClusterIds; }
 
   void SetSHCoefficients(float* shCoefficients);
   float* GetSHCoefficients() { return mSHCoefficients; }
+		
+  float* GetInterpolatedSHCoefficients() { return mInterpolatedSHCoefficients; }
   
   D3DXCOLOR GetDiffuseMaterial(int i);
 
@@ -79,7 +89,7 @@ protected:
   float mRotationZ;
     
   D3DXMATRIX  mWorld;
-	D3DXCOLOR   mDiffuseMtrl[3];
+  D3DXCOLOR   mDiffuseMtrl[3];
 		
   D3DXHANDLE   mhWorld;
   D3DXHANDLE   mhWorldInverseTranspose;
@@ -87,8 +97,13 @@ protected:
   ID3DXPRTCompBuffer* mPRTCompBuffer;
   float* mPRTClusterBases;
   float* mPCAWeights;
+  int* mClusterIds;
+
   float* mSHCoefficients;
-  UINT* mClusterIds;
+	float* mInterpolatedSHCoefficients;
+
+  int* mMappingIndices;
+  float* mMappingWeights;
 
   WCHAR* directory;
   WCHAR* name;

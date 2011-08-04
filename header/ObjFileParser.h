@@ -10,7 +10,7 @@
 #endif
 
 #include "d3dUtil.h"
-#include "MeshDatastructures.h"
+#include "Structs.h"
 
 class ObjFileParser {
 

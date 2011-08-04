@@ -66,15 +66,18 @@
     <ClCompile Include="..\..\sources\ObjFileParser.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\sources\NNMapping.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\sources\Interpolator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\shader\cubemap.fx">
       <Filter>Resource Files</Filter>
     </None>
     <None Include="..\..\shader\diffuse.fx">
-      <Filter>Resource Files</Filter>
-    </None>
-    <None Include="..\..\shader\errorVisualization.fx">
       <Filter>Resource Files</Filter>
     </None>
   </ItemGroup>
@@ -127,9 +130,6 @@
     <ClInclude Include="..\..\header\PRTHierarchyMapping.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\header\SimpleK3Tree.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\header\Timer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -140,6 +140,15 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\header\XFileCreator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\header\NNMapping.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\header\Interpolator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\header\Structs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

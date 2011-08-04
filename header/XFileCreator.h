@@ -2,7 +2,7 @@
 #define XFILECREATOR_H
 
 #include "d3dUtil.h"
-#include "MeshDatastructures.h"
+#include "Structs.h"
 
 class XFileCreator {
 public:

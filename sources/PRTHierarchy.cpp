@@ -4,15 +4,10 @@
 PRTHierarchy::PRTHierarchy(IDirect3DDevice9 *device) {
   mDevice = device;
 
-  srand ( time(NULL) );
-
-  mVisualizeMapping = false;
-
   mTimer = new Timer();
 
   mRenderMesh = 0;
   mApproxMesh = 0;
-  mLightSource = 0;
   mPRTEngine = 0;
   mPRTHierarchyMapping = 0;
   mOrder = 0;
@@ -91,11 +86,9 @@ HRESULT PRTHierarchy::ScaleMeshes() {
   return D3D_OK;
 }
 
-HRESULT PRTHierarchy::CalculateSHCoefficients(LightSource* lightSource) {
+HRESULT PRTHierarchy::CalculateSHCoefficients() {
   HRESULT hr;
 
-  mLightSource = lightSource;
-  
   mTimer->Start();
   hr = mPRTEngine->CalculateSHCoefficients(mApproxMesh);
   PD(hr, L"calculate coefficients for approx mesh");
@@ -107,67 +100,114 @@ HRESULT PRTHierarchy::CalculateSHCoefficients(LightSource* lightSource) {
   PD(hr, L"calculate coefficients for approx mesh");
   if(FAILED(hr)) return  hr;
   mTimer->Stop(L"calculate coefficients for render mesh");
-  
-  hr = lightSource->CalculateSHCoefficients(mOrder);
-  PD(hr, L"calculate coefficients for lightsource");
-  if(FAILED(hr)) return hr;
-  
+    
   return D3D_OK;
 }
 
-HRESULT PRTHierarchy::CalculateDiffuseColor() {
-  HRESULT hr;
+HRESULT PRTHierarchy::CalculateNNMapping(DWORD numNN) {
+	HRESULT hr;
 
-  hr = mPRTEngine->CalculateDiffuseColor(mRenderMesh, mLightSource);
-  PD(hr, L"calculate diffuse color for render mesh");
-  if(FAILED(hr)) return hr;
+	mRenderMesh->InitialiseMappingDatastructures(numNN);
+	int* mappingIndices = mRenderMesh->GetMappingIndices();
+	float* mappingWeights = mRenderMesh->GetMappingWeights();
 
-  hr = FillColorVector(mRenderMeshVertexColorsExact, mRenderMesh);
-  PD(hr, L"fill render mesh vertex color vector with exact colors");
-  if(FAILED(hr)) return hr;
-
-  hr = mPRTEngine->CalculateDiffuseColor(mApproxMesh, mLightSource);
-  PD(hr, L"calculate diffuse color for approx mesh");
-  if(FAILED(hr)) return hr;
-
-  hr = FillColorVector(mApproxMeshVertexColors, mApproxMesh);
-  PD(hr, L"fill approx mesh vertex color vector");
-  if(FAILED(hr)) return hr;
-
-  PD(L"size of approx mesh color vector: ", (int)mApproxMeshVertexColors.size());
-  
-  if(mVisualizeMapping) {
-    FillWithRandomColors(mApproxMeshVertexColors);
-    PD(L"fill approx mesh with random vertex colors");
-  }
-
-  mTimer->Start();
-  mPRTHierarchyMapping->NearestNeighbourMappingTree( 3,
+	mPRTHierarchyMapping->NearestNeighbourMappingTree(numNN,
                                                      mApproxMeshVertices,
                                                      mRenderMeshVertices,
-                                                     mApproxMeshVertexColors,
-                                                     mRenderMeshVertexColors);
+                                                     mappingIndices,
+                                                     mappingWeights);
 
-  hr = SetRenderMeshVertexColors();
-  PD(hr, L"set vertex colors for render mesh");
-  if(FAILED(hr)) return hr;
-  mTimer->Stop(L"NN mapping");
+	return D3D_OK;
+}
 
-  return D3D_OK;
+HRESULT PRTHierarchy::InterpolateSHCoefficients(DWORD numNN) {
+	HRESULT hr;
+	ID3DXPRTCompBuffer* prtCompBuffer = mRenderMesh->GetPRTCompBuffer();
+	UINT numChannels = prtCompBuffer->GetNumChannels();
+	UINT numCoeffs = prtCompBuffer->GetNumCoeffs();
+	
+	int* mappingIndices = mRenderMesh->GetMappingIndices();
+	float* mappingWeights = mRenderMesh->GetMappingWeights();
+		
+	float* approxSHCoeff = mApproxMesh->GetSHCoefficients();
+	float* exactSHCoeff = mRenderMesh->GetSHCoefficients();
+	float* interpolSHCoeff = mRenderMesh->GetInterpolatedSHCoefficients();
+
+	UINT numApproxMeshVertices = mApproxMesh->GetNumVertices();
+	UINT numRenderMeshVertices = mRenderMesh->GetNumVertices();
+	
+	bool debug = false;
+		
+	for(int i = 0; i < numRenderMeshVertices; ++i) {
+		UINT stride = numCoeffs * numChannels;
+		for(int j = 0; j < numCoeffs; ++j) {
+			float redCoeff = 0.0f;
+			float greenCoeff = 0.0f;
+			float blueCoeff = 0.0f;
+			
+			for(int k = 0; k < numNN; ++k) {
+				UINT index = mappingIndices[i*numNN + k];
+				if(index < 0 || index >= numApproxMeshVertices) {
+					PD(L"error nn index out of bounds");
+					return -1;
+				}
+				
+				float redApprox   = approxSHCoeff[index*stride + 0*numCoeffs + j];
+				float greenApprox = approxSHCoeff[index*stride + 1*numCoeffs + j];
+				float blueApprox  = approxSHCoeff[index*stride + 2*numCoeffs + j];
+				float weight = mappingWeights[i*numNN + k];
+								
+				redCoeff   += weight * redApprox;
+				greenCoeff += weight * greenApprox;
+				blueCoeff  += weight * blueApprox;
+
+				if(debug) PD(L"redApprox: ", redApprox);
+				if(debug) PD(L"greenApprox: ", greenApprox);
+				if(debug) PD(L"blueApprox: ", blueApprox);
+				if(debug) PD(L"weight: ", weight);
+				if(debug) PD(L"partial redCoeff: ", redCoeff);
+				if(debug) PD(L"partial greenCoeff: ", greenCoeff);
+				if(debug) PD(L"partial blueCoeff: ", blueCoeff);		
+			}
+			
+			if(debug) PD(L"final redCoeff: ", redCoeff);
+			if(debug) PD(L"final redCoeff: ", greenCoeff);
+			if(debug) PD(L"final redCoeff: ", blueCoeff);
+
+			interpolSHCoeff[i*stride + 0*numCoeffs + j] = redCoeff;
+			interpolSHCoeff[i*stride + 1*numCoeffs + j] = greenCoeff;
+			interpolSHCoeff[i*stride + 2*numCoeffs + j] = blueCoeff;
+		}
+	}
+
+	return D3D_OK;
+}
+
+HRESULT PRTHierarchy::TransferSHDataToGPU(DWORD numNN, bool interpolate) {
+	HRESULT hr;
+
+	mRenderMesh->FillVertexBufferWithSHCoefficients(numNN, interpolate);
+
+	return D3D_OK;
+}
+
+HRESULT PRTHierarchy::CheckColor(LightSource* lightSource) {
+	mPRTEngine->CheckCalculatedSHCoefficients(mRenderMesh, lightSource);
+
+	return D3D_OK;
 }
 
 HRESULT PRTHierarchy::UpdateLighting(LightSource* lightSource) {
   HRESULT hr;
-  
-  mLightSource = lightSource;
 
-  hr = lightSource->CalculateSHCoefficients(mOrder);
-  PD(hr, L"calculate coefficients for lightsource");
-  if(FAILED(hr)) return hr;
+  UINT numCoeffs = mOrder * mOrder;
 
-  hr = mPRTEngine->CalculateDiffuseColor(mApproxMesh, mLightSource);
-  PD(hr, L"calculate diffuse color for approx mesh");
-  if(FAILED(hr)) return hr;
+  lightSource->CalculateSHCoefficients(mOrder);
+
+  mEffect->SetFloatArray("redSHCoeffsLight", lightSource->GetSHCoeffsRed(), numCoeffs);
+  mEffect->SetFloatArray("greenSHCoeffsLight", lightSource->GetSHCoeffsGreen(), numCoeffs);
+  mEffect->SetFloatArray("blueSHCoeffsLight", lightSource->GetSHCoeffsBlue(), numCoeffs);
+  mEffect->CommitChanges();
 
   return D3D_OK;
 }
@@ -217,70 +257,8 @@ HRESULT PRTHierarchy::FillVertexVector(std::vector<Vertex> &vec, Mesh* mesh) {
   return D3D_OK;
 }
 
-HRESULT PRTHierarchy::FillColorVector(std::vector<D3DXCOLOR> &colors,
-                                      Mesh* mesh)
-{
-  HRESULT hr;
-  
-  ID3DXMesh* d3dMesh = mesh->GetMesh();
-
-  FULL_VERTEX *pVertices = NULL;
-  hr = d3dMesh->LockVertexBuffer(0, (void**)&pVertices);
-  PD(hr, L"lock vertex buffer");
-  if(FAILED(hr)) return hr;
-
-  for ( DWORD i = 0; i < d3dMesh->GetNumVertices(); ++i ) {
-    D3DXCOLOR color = pVertices[i].blendWeight1;
-    colors.push_back(color);
-  }
-
-  hr = d3dMesh->UnlockVertexBuffer();
-  PD(hr, L"unlock vertex buffer");
-  if(FAILED(hr)) return hr;
-  
-  return D3D_OK;
-}
-
-HRESULT PRTHierarchy::SetRenderMeshVertexColors()
-{
-  HRESULT hr;
-  
-  ID3DXMesh* d3dMesh = mRenderMesh->GetMesh();
-
-  FULL_VERTEX *pVertices = NULL;
-  hr = d3dMesh->LockVertexBuffer(0, (void**)&pVertices);
-  PD(hr, L"lock vertex buffer");
-  if(FAILED(hr)) return hr;
-
-  for ( DWORD i = 0; i < d3dMesh->GetNumVertices(); ++i ) {
-    pVertices[i].blendWeight1 = mRenderMeshVertexColors[i];
-    pVertices[i].blendWeight2 = mRenderMeshVertexColorsExact[i];
-  }
-
-  hr = d3dMesh->UnlockVertexBuffer();
-  PD(hr, L"unlock vertex buffer");
-  if(FAILED(hr)) return hr;
-  
-  return D3D_OK;
-}
-
-void PRTHierarchy::FillWithRandomColors(std::vector<D3DXCOLOR> &colors){
-  for(int i = 0; i < colors.size(); ++i) {
-    colors[i] = GenerateRandomColor();
-  }
-}
-
-D3DXCOLOR PRTHierarchy::GenerateRandomColor() {
-  D3DXCOLOR color;
-  color.r = std::rand() / (float)RAND_MAX;
-  color.g = std::rand() / (float)RAND_MAX; 
-  color.b = std::rand() / (float)RAND_MAX; 
-  color.a = 1.0f;
-
-  return color;
-}
-
-void PRTHierarchy::LoadEffect(ID3DXEffect* mEffect){
+void PRTHierarchy::LoadEffect(ID3DXEffect* effect){
+  mEffect = effect;
   mRenderMesh->LoadFX(mEffect);
   mApproxMesh->LoadFX(mEffect);
 }
@@ -300,4 +278,15 @@ int PRTHierarchy::GetNumVertices() {
 
 int PRTHierarchy::GetNumFaces() {
   return mRenderMesh->GetNumFaces();
+}
+
+void PRTHierarchy::UpdateState(bool renderError, bool interpolate, DWORD numNN) {
+	PD(L"update state");
+	PD(L"interpolate: ", interpolate);
+	PD(L"renderError: ", renderError);
+
+	mRenderMesh->FillVertexBufferWithSHCoefficients(numNN, interpolate);
+	
+	mEffect->SetBool("renderError", renderError);
+	mEffect->CommitChanges();
 }

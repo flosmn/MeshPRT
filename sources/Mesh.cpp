@@ -12,7 +12,10 @@ Mesh::Mesh(IDirect3DDevice9 *device)
   mPRTCompBuffer = 0;
   mPCAWeights = 0;
   mSHCoefficients = 0;
+	mInterpolatedSHCoefficients = 0;
   mClusterIds = 0;
+  mMappingIndices = 0;
+  mMappingWeights = 0;
 
   hasTextures = false;
   mMesh = 0;  
@@ -38,11 +41,35 @@ Mesh::Mesh(IDirect3DDevice9 *device)
   mDiffuseMtrl[2].b = 1.0f; 
   mDiffuseMtrl[2].a = 1.0f;
 
-  }
+}
+
+void Mesh::InitialiseMappingDatastructures(DWORD numNN) {
+	mMappingIndices = new int[GetNumVertices() * numNN];
+	mMappingWeights = new float[GetNumVertices() * numNN];
+}
+
+void Mesh::InitialiseSHDataStructures() {
+	UINT numCoeffs = GetPRTCompBuffer()->GetNumCoeffs();
+	UINT numClusters = GetPRTCompBuffer()->GetNumClusters();
+	UINT numChannels = GetPRTCompBuffer()->GetNumChannels();
+	UINT numPCA = GetPRTCompBuffer()->GetNumPCA();
+	int nClusterBasisSize = ( numPCA + 1 ) * numCoeffs * numChannels;  // mean + pca-basis vectors of cluster
+	int nBufferSize = nClusterBasisSize * numClusters;
+  
+	mPRTClusterBases = new float[nBufferSize];
+	mPCAWeights = new float[GetNumVertices() * numPCA];
+
+	UINT shCoefficientsSize = GetNumVertices() * numChannels * numCoeffs;
+	mSHCoefficients = new float[shCoefficientsSize];
+	mInterpolatedSHCoefficients = new float[shCoefficientsSize];
+	mClusterIds = new int[GetNumVertices()];
+}
 
 D3DXCOLOR Mesh::GetDiffuseMaterial(int i) 
 {
-  return mDiffuseMtrl[0];
+	if(HasTextures()) return D3DXCOLOR(1.0f, 1.0f, 1.0f, 1.0f);
+
+	return mDiffuseMtrl[i % 3];
 }
 
 void Mesh::LoadFX(ID3DXEffect *effect) 
@@ -78,18 +105,10 @@ void Mesh::DrawMesh()
   GetMesh()->GetAttributeTable( NULL, &dwNumMeshes );
   
   for( UINT i = 0; i < dwNumMeshes; i++ ) {
-    D3DXCOLOR material;
-
     if(i < mTextures.size() && mTextures[i] != NULL)
-    {
+	{
       hr = mEffect->SetTexture( "AlbedoTex", mTextures[i] );
-      material = D3DXCOLOR( 1.0f, 1.0f, 1.0f, 1.0f );
-    }    
-    else 
-    {
-      material = D3DXCOLOR( 1.0f, 1.0f, 1.0f, 1.0f );
-    }
-        
+	}   
     mEffect->CommitChanges();
     mMesh->DrawSubset( i );
   }
@@ -105,7 +124,7 @@ void Mesh::SetPcaWeights(float* pcaWeights) {
   mPCAWeights = pcaWeights;
 }
 
-void Mesh::SetClusterIds(UINT* clusterIds) { 
+void Mesh::SetClusterIds(int* clusterIds) { 
   SAFE_DELETE_ARRAY(mClusterIds)
   mClusterIds = clusterIds;
 }
@@ -134,18 +153,24 @@ HRESULT Mesh::AdjustMeshDecl()
 
   D3DVERTEXELEMENT9 vertDecl[ MAX_FVF_DECL_SIZE ] =
   {
-    {0,  0,  D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0},
-    {0,  12, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_NORMAL, 0},
-    {0,  24, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 0},
+  {0,  0,  D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 0},
+  {0,  12, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_NORMAL, 0},
+  {0,  24, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 0},
 
-    {0,  32, D3DDECLTYPE_FLOAT1, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_BLENDWEIGHT, 0},
-    {0,  36, D3DDECLTYPE_FLOAT4, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_BLENDWEIGHT, 1},
-    {0,  52, D3DDECLTYPE_FLOAT4, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_BLENDWEIGHT, 2},
-    {0,  68, D3DDECLTYPE_FLOAT4, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_BLENDWEIGHT, 3},
-    {0,  84, D3DDECLTYPE_FLOAT4, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_BLENDWEIGHT, 4},
-    {0, 100, D3DDECLTYPE_FLOAT4, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_BLENDWEIGHT, 5},
-    {0, 116, D3DDECLTYPE_FLOAT4, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_BLENDWEIGHT, 6},
-    D3DDECL_END()
+	// exact SH-coefficients
+  {0, 32, D3DDECLTYPE_FLOAT4, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_BLENDWEIGHT, 0},
+	{0, 48, D3DDECLTYPE_FLOAT4, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_BLENDWEIGHT, 1},
+  {0, 64, D3DDECLTYPE_FLOAT4, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_BLENDWEIGHT, 2},
+  {0, 80, D3DDECLTYPE_FLOAT4, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_BLENDWEIGHT, 3},
+  {0, 96, D3DDECLTYPE_FLOAT4, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_BLENDWEIGHT, 4},
+  {0, 112, D3DDECLTYPE_FLOAT4, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_BLENDWEIGHT, 5},
+  {0, 128, D3DDECLTYPE_FLOAT4, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_BLENDWEIGHT, 6},
+	{0, 144, D3DDECLTYPE_FLOAT4, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_BLENDWEIGHT, 7},
+	{0, 160, D3DDECLTYPE_FLOAT4, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_BLENDWEIGHT, 8},
+	  
+	{0, 176, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 2},
+	{0, 188, D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_POSITION, 3},
+	D3DDECL_END()
   };
   
   hr = pInMesh->CloneMesh( pInMesh->GetOptions(), vertDecl, mDevice, &pOutMesh );
@@ -236,7 +261,7 @@ HRESULT Mesh::LoadMesh(WCHAR* directory, WCHAR* name, WCHAR* extension)
   PD( AdjustMeshDecl(), L"adjust mesh delaration" );
   PD( AttribSortMesh(), L"attribute sort mesh" );
   PD( LoadTextures(), L"load textures" );
-
+  
   return D3D_OK;
 }
 
@@ -276,7 +301,7 @@ HRESULT Mesh::LoadTextures()
       MultiByteToWideChar( CP_ACP, 0, filename_c, -1, filename_w, length );
       WCHAR filepathrel[120];
       WCHAR filepath[120];
-      Concat( filepath, GetDirectory(), filename_w );
+      Concat( filepathrel, GetDirectory(), filename_w );
       AppendToRootDir(filepath, filepathrel);
 
       OutputDebugString( L"texture specified for material:\n" );
@@ -309,6 +334,51 @@ HRESULT Mesh::LoadTextures()
   return D3D_OK;
 }
 
+HRESULT Mesh::FillVertexBufferWithSHCoefficients(DWORD numNN, bool interpolate) {
+	HRESULT hr;
+	
+	UINT numPCA = mPRTCompBuffer->GetNumPCA();
+	UINT numChannels = mPRTCompBuffer->GetNumChannels();
+	UINT numCoeffs = mPRTCompBuffer->GetNumCoeffs();
+	UINT numClusters = mPRTCompBuffer->GetNumClusters();
+	UINT numVertices = mPRTCompBuffer->GetNumSamples();
+
+	float* shCoefficients = mInterpolatedSHCoefficients;
+	if(!interpolate) shCoefficients = mSHCoefficients;
+		
+	FULL_VERTEX* pVertexBuffer = NULL;
+	hr = mMesh->LockVertexBuffer( 0, ( void** )&pVertexBuffer );
+	PD(hr, L"lock vertex buffer");
+	if(FAILED(hr)) return hr;
+
+	for( UINT j = 0; j < GetNumVertices(); j++ )
+	{
+		int coeffOffset = 32;
+		for(int i = 0; i < numCoeffs; ++i) {
+			float red    = shCoefficients[j * numCoeffs * numChannels + 0 * numCoeffs + i];
+			float green  = shCoefficients[j * numCoeffs * numChannels + 1 * numCoeffs + i];
+			float blue   = shCoefficients[j * numCoeffs * numChannels + 2 * numCoeffs + i];
+			
+			if(i == 0) pVertexBuffer[j].shCoeff1 = D3DXCOLOR(red, green, blue, 1.0f);
+			if(i == 1) pVertexBuffer[j].shCoeff2 = D3DXCOLOR(red, green, blue, 1.0f);
+			if(i == 2) pVertexBuffer[j].shCoeff3 = D3DXCOLOR(red, green, blue, 1.0f);
+			if(i == 3) pVertexBuffer[j].shCoeff4 = D3DXCOLOR(red, green, blue, 1.0f);
+			if(i == 4) pVertexBuffer[j].shCoeff5 = D3DXCOLOR(red, green, blue, 1.0f);
+			if(i == 5) pVertexBuffer[j].shCoeff6 = D3DXCOLOR(red, green, blue, 1.0f);
+			if(i == 6) pVertexBuffer[j].shCoeff7 = D3DXCOLOR(red, green, blue, 1.0f);
+			if(i == 7) pVertexBuffer[j].shCoeff8 = D3DXCOLOR(red, green, blue, 1.0f);
+			if(i == 8) pVertexBuffer[j].shCoeff9 = D3DXCOLOR(red, green, blue, 1.0f);
+
+			pVertexBuffer[j].index = D3DXVECTOR3(j, 0.0f, 0.0f);
+		}
+	}
+	hr = mMesh->UnlockVertexBuffer();
+	PD(hr, L"unlock vertex buffer");
+	if(FAILED(hr)) return hr;
+
+	return D3D_OK;
+}
+
 void Mesh::CleanUpMesh() 
 {
   SAFE_RELEASE(mMesh)
@@ -318,7 +388,10 @@ void Mesh::CleanUpMesh()
   SAFE_DELETE_ARRAY(mPRTClusterBases);  
   SAFE_DELETE_ARRAY(mPCAWeights);
   SAFE_DELETE_ARRAY(mSHCoefficients);
+	SAFE_DELETE_ARRAY(mInterpolatedSHCoefficients);
   SAFE_DELETE_ARRAY(mClusterIds);
+  SAFE_DELETE_ARRAY(mMappingIndices);
+  SAFE_DELETE_ARRAY(mMappingWeights);
 
   for( int i = 0; i < mTextures.size(); i++ )
   {
