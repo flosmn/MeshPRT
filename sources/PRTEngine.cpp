@@ -132,8 +132,7 @@ HRESULT PRTEngine::CalculateSHCoefficients(Mesh* mesh) {
   for( UINT i = 0; i < mesh->GetNumVertices(); i++ )
   {
     int clusterId = clusterIds[i];
-    	
-	GetSHCoefficientsForVertex(shCoefficients, i, clusterId, pcaWeights, numCoeffs, mesh->GetPRTClusterBases());    
+		GetSHCoefficientsForVertex(shCoefficients, i, clusterId, pcaWeights, numCoeffs, mesh->GetPRTClusterBases());    
   }
 
   ReleaseCOM( engine );
@@ -149,7 +148,7 @@ HRESULT PRTEngine::CalculateSHCoefficients(Mesh* mesh) {
 }
 
 void PRTEngine::GetSHCoefficientsForVertex(float* shCoefficients, UINT vertexId, 
-	UINT clusterId, float* pcaWeights, UINT numCoeffs, float* prtClusterBases)
+	UINT clusterId, float* pcaWeights, UINT numCoeffs, float* shCluster)
 {
 	DWORD clusterBasisSize = ( mNumPCA + 1 ) * numCoeffs * mNumChannels;
 		
@@ -158,17 +157,17 @@ void PRTEngine::GetSHCoefficientsForVertex(float* shCoefficients, UINT vertexId,
 		float green = 0;
 		float blue = 0;
 		
-		red   = prtClusterBases[clusterId * clusterBasisSize + 0 * numCoeffs + i];
-		green = prtClusterBases[clusterId * clusterBasisSize + 1 * numCoeffs + i];
-		blue  = prtClusterBases[clusterId * clusterBasisSize + 2 * numCoeffs + i];
+		red   = shCluster[clusterId * clusterBasisSize + 0 * numCoeffs + i];
+		green = shCluster[clusterId * clusterBasisSize + 1 * numCoeffs + i];
+		blue  = shCluster[clusterId * clusterBasisSize + 2 * numCoeffs + i];
 
 		for(int j = 0; j < mNumPCA; ++j) {
-			int nOffset = clusterId * clusterBasisSize + ( j + 1 ) * numCoeffs * mNumChannels;
+			int nOffset = clusterId*clusterBasisSize + (j+1)*numCoeffs*mNumChannels;
 		
 			float weight = pcaWeights[vertexId * mNumPCA + j];
-			float redPCA   = weight * prtClusterBases[nOffset + 0 * numCoeffs + i];
-			float greenPCA = weight * prtClusterBases[nOffset + 1 * numCoeffs + i];
-			float bluePCA  = weight * prtClusterBases[nOffset + 2 * numCoeffs + i];
+			float redPCA   = weight * shCluster[nOffset + 0 * numCoeffs + i];
+			float greenPCA = weight * shCluster[nOffset + 1 * numCoeffs + i];
+			float bluePCA  = weight * shCluster[nOffset + 2 * numCoeffs + i];
 
 			red += redPCA;
 			green += greenPCA;
@@ -179,30 +178,10 @@ void PRTEngine::GetSHCoefficientsForVertex(float* shCoefficients, UINT vertexId,
 		shCoefficients[offset + i + 0 * numCoeffs] = red;
 		shCoefficients[offset + i + 1 * numCoeffs] = green;
 		shCoefficients[offset + i + 2 * numCoeffs] = blue;
-
-		if(vertexId == 200) {
-			PD(L"coefficients for vertex 200");
-			PD(L"coefficient ", i);
-			PD(L"red: ", red);
-			PD(L"green: ", green);
-			PD(L"blue: ", blue);
-		}
-		if(vertexId == 786) {
-			PD(L"coefficients for vertex 786");
-			PD(L"coefficient ", i);
-			PD(L"red: ", red);
-			PD(L"green: ", green);
-			PD(L"blue: ", blue);
-		}
 	}
 }
 
 
-/*
-After the call of this function the precomputed diffuse color will be stored
-at the vertex data position blendweight1 (see FULL_VERTEX structure). 
-Previously stored data on this position will be overwritten (PCAWeights). 
-*/
 HRESULT PRTEngine::CheckCalculatedSHCoefficients(Mesh* mesh, LightSource* light) {
   HRESULT hr;
 
@@ -224,9 +203,12 @@ HRESULT PRTEngine::CheckCalculatedSHCoefficients(Mesh* mesh, LightSource* light)
     int clusterId = clusterIds[i];
     float* pPCAWeights = &(pcaWeights[i * mNumPCA]);
   
-		float* redLight = light->GetSHCoeffsRed();
-		float* greenLight = light->GetSHCoeffsGreen();
-		float* blueLight = light->GetSHCoeffsBlue();
+		float rSHCoeffLight[D3DXSH_MAXORDER*D3DXSH_MAXORDER];
+		float gSHCoeffLight[D3DXSH_MAXORDER*D3DXSH_MAXORDER];
+		float bSHCoeffLight[D3DXSH_MAXORDER*D3DXSH_MAXORDER];
+		light->GetSHCoeffsRed(mesh, rSHCoeffLight);
+		light->GetSHCoeffsGreen(mesh, gSHCoeffLight);
+		light->GetSHCoeffsBlue(mesh, bSHCoeffLight);
 
     D3DXCOLOR color1 = GetPrecomputedDiffuseColor(clusterId, 
                                                         pPCAWeights,
@@ -234,18 +216,18 @@ HRESULT PRTEngine::CheckCalculatedSHCoefficients(Mesh* mesh, LightSource* light)
                                                         numCoeffs,
                                                         numChannels,
                                                         mesh->GetPRTClusterBases(),
-                                                        redLight,
-                                                        greenLight,
-                                                        blueLight);
+                                                        rSHCoeffLight,
+                                                        gSHCoeffLight,
+                                                        bSHCoeffLight);
     
-    float red = 0;
-		float green = 0;
-		float blue = 0;
+    float red = 0.0f;
+		float green = 0.0f;
+		float blue = 0.0f;
 		for(int j = 0; j < numCoeffs; ++j) {
 			UINT offset = i * numCoeffs * numChannels;
-			red   += redLight[j]   * shCoefficients[offset + 0 * numCoeffs + j];
-			green += greenLight[j] * shCoefficients[offset + 1 * numCoeffs + j];
-			blue  += blueLight[j]  * shCoefficients[offset + 2 * numCoeffs + j];
+			red   += rSHCoeffLight[j]   * shCoefficients[offset + 0 * numCoeffs + j];
+			green += gSHCoeffLight[j] * shCoefficients[offset + 1 * numCoeffs + j];
+			blue  += bSHCoeffLight[j]  * shCoefficients[offset + 2 * numCoeffs + j];
 		}
 
 		D3DXCOLOR color2 = D3DXCOLOR(red, green, blue, 1.0f);
@@ -255,19 +237,56 @@ HRESULT PRTEngine::CheckCalculatedSHCoefficients(Mesh* mesh, LightSource* light)
 		{
 				PD(L"vertex color is wrong. vertex index: ", (int)i);
 		}
-		
-		D3DXCOLOR diff = D3DXCOLOR(	abs(color1.r - color2.r),
-																abs(color1.g - color2.g),
-																abs(color1.b - color2.b),
-																abs(color1.a - color2.a));
-
-		pVertexBuffer[i].shColor = D3DXVECTOR3(color2.r, color2.g, color2.b);
   }  
 
 	hr = mesh->GetMesh()->UnlockVertexBuffer();
 	PD(hr, L"unlock vertex buffer");
 	if(FAILED(hr)) return hr;
 
+  return D3D_OK;
+}
+
+HRESULT PRTEngine::UpdateExactSHLighting(Mesh* mesh, LightSource* light){
+	HRESULT hr;
+
+  ID3DXPRTCompBuffer* compPRTBuffer = mesh->GetPRTCompBuffer();
+  float* shCoefficients = mesh->GetSHCoefficients();
+  
+  DWORD numCoeffs = compPRTBuffer->GetNumCoeffs();
+	DWORD numChannels = compPRTBuffer->GetNumChannels();
+
+  FULL_VERTEX* pVertexBuffer = NULL;
+	hr = mesh->GetMesh()->LockVertexBuffer( 0, ( void** )&pVertexBuffer );
+	PD(hr, L"lock vertex buffer");
+	if(FAILED(hr)) return hr;
+
+	float rSHCoeffLight[D3DXSH_MAXORDER*D3DXSH_MAXORDER];
+	float gSHCoeffLight[D3DXSH_MAXORDER*D3DXSH_MAXORDER];
+	float bSHCoeffLight[D3DXSH_MAXORDER*D3DXSH_MAXORDER];
+	light->GetSHCoeffsRed(mesh, rSHCoeffLight);
+	light->GetSHCoeffsGreen(mesh, gSHCoeffLight);
+	light->GetSHCoeffsBlue(mesh, bSHCoeffLight);
+	
+  for( UINT j = 0; j < mesh->GetNumVertices(); j++ )
+  {
+    float r = 0.0f;
+		float g = 0.0f;
+		float b = 0.0f;
+    
+		UINT offset = j * numCoeffs * numChannels;
+		for(int i = 0; i < numCoeffs; ++i){
+			r += rSHCoeffLight[i] * shCoefficients[offset + 0 * numCoeffs + i];
+			g += gSHCoeffLight[i] * shCoefficients[offset + 1 * numCoeffs + i];
+			b += bSHCoeffLight[i] * shCoefficients[offset + 2 * numCoeffs + i];
+		}
+
+		pVertexBuffer[j].exactSHColor = D3DXVECTOR3(r, g, b);
+  }  
+
+	hr = mesh->GetMesh()->UnlockVertexBuffer();
+	PD(hr, L"unlock vertex buffer");
+	if(FAILED(hr)) return hr;
+	
   return D3D_OK;
 }
 

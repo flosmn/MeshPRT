@@ -41,7 +41,7 @@ struct FULL_VERTEX {
 	D3DXCOLOR shCoeff8;
 	D3DXCOLOR shCoeff9;
 
-	D3DXVECTOR3 shColor;
+	D3DXVECTOR3 exactSHColor;
 
 	D3DXVECTOR3 index;
 };

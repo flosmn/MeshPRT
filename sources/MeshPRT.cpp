@@ -29,19 +29,16 @@ public:
   
 private:
   HRESULT Init();
-  HRESULT UpdateLighting();
   void SetTechnique();
+	void LoadCubeMap(int i);
     
   bool initialized;
 
 	bool mVisualizeError;
 	bool mInterpolate;
 
-	DWORD mNumNN;
-
   float reflectivity;
 
-  D3DXMATRIX mWorld;
   D3DXMATRIX mProj;
 
   GfxStats* mGfxStats;
@@ -99,10 +96,10 @@ MeshPRT::MeshPRT( std::string winCaption, D3DDEVTYPE devType,
 
 MeshPRT::~MeshPRT()
 {
-  delete mGfxStats;
-  delete mCamera;
-  delete mCubeMap;
-  delete mPRTHierarchy;
+  SAFE_DELETE(mGfxStats)
+	SAFE_DELETE(mCamera)
+  SAFE_DELETE(mCubeMap)
+	SAFE_DELETE(mPRTHierarchy)
   SAFE_RELEASE(mFX)
 }
 
@@ -149,13 +146,7 @@ HRESULT MeshPRT::Init() {
 
   // order is max 4
   DWORD order = 3;
-  mNumNN = 3;
-    
-  mCubeMap = new CubeMap(gd3dDevice);
-  hr = mCubeMap->LoadCubeMap(L"cubemaps/", L"stpeters_cross", L".dds");
-  PD(hr, L"load cube map");
-  if(FAILED(hr)) return hr;
-
+  
   mPRTHierarchy = new PRTHierarchy(gd3dDevice);
   mPRTHierarchy->LoadMeshHierarchy(L"bimba_d",
                                    L"bimba_e",
@@ -171,25 +162,23 @@ HRESULT MeshPRT::Init() {
   // has to happen after SH calculations
   buildEffectFiles();
   
-	mPRTHierarchy->CalculateNNMapping(mNumNN);
+	mPRTHierarchy->CalculateMapping();
 	PD(hr, L"CalculateNNMapping");
 	if(FAILED(hr)) return hr;
   
-	mPRTHierarchy->InterpolateSHCoefficients(mNumNN);
+	mPRTHierarchy->InterpolateSHCoefficients();
 	PD(hr, L"InterpolateSHCoefficients");
 	if(FAILED(hr)) return hr;
 
-	mPRTHierarchy->TransferSHDataToGPU(mNumNN, mInterpolate);
+	mPRTHierarchy->TransferSHDataToGPU();
   PD(hr, L"TransferSHDataToGPU");
 	if(FAILED(hr)) return hr;
 
-	mPRTHierarchy->UpdateLighting(mCubeMap);
-
-  mPRTHierarchy->CheckColor(mCubeMap);
+	LoadCubeMap(1);	
   
-  mGfxStats = new GfxStats();
+  //mPRTHierarchy->CheckColor(mCubeMap);
 
-  D3DXMatrixIdentity(&mWorld);
+  mGfxStats = new GfxStats();
 
   onResetDevice();
 
@@ -208,6 +197,19 @@ void MeshPRT::updateScene(float dt)
 
   gDInput->poll();
   
+	if( gDInput->keyDown(DIK_1) ) {
+    LoadCubeMap(1);
+  }
+	if( gDInput->keyDown(DIK_2) ) {
+    LoadCubeMap(2);
+  }
+	if( gDInput->keyDown(DIK_3) ) {
+    LoadCubeMap(3);
+  }
+	if( gDInput->keyDown(DIK_4) ) {
+    LoadCubeMap(4);
+  }
+
   if( gDInput->keyDown(DIK_Z) ) {
     reflectivity = reflectivity - 0.0001f;
 
@@ -224,30 +226,56 @@ void MeshPRT::updateScene(float dt)
     }
   }
 	
-	if( gDInput->keyDown(DIK_E) ) {
-    mVisualizeError = !mVisualizeError;
-		mPRTHierarchy->UpdateState(mVisualizeError, mInterpolate, mNumNN);
+	if( gDInput->keyDown(DIK_L) ) {
+    if(!mVisualizeError){
+			mPRTHierarchy->UpdateExactSHLighting(mCubeMap);
+			mVisualizeError = true;
+			mPRTHierarchy->UpdateState(mVisualizeError, mInterpolate);
+		}
+  }
+
+	if( gDInput->keyDown(DIK_K) ) {
+		if(mVisualizeError){
+			mVisualizeError = false;
+			mPRTHierarchy->UpdateState(mVisualizeError, mInterpolate);
+		}
   }
 
 	if( gDInput->keyDown(DIK_I) ) {
 		if(!mInterpolate){ 
 			mInterpolate = true;	
-			mPRTHierarchy->UpdateState(mVisualizeError, mInterpolate, mNumNN);
+			mPRTHierarchy->UpdateState(mVisualizeError, mInterpolate);
 		}
   }
 
 	if( gDInput->keyDown(DIK_O) ) {
 		if(mInterpolate){ 
 			mInterpolate = false;	
-			mPRTHierarchy->UpdateState(mVisualizeError, mInterpolate, mNumNN);
+			mPRTHierarchy->UpdateExactSHLighting(mCubeMap);
+			mPRTHierarchy->UpdateState(mVisualizeError, mInterpolate);
 		}
   }
-}
 
-HRESULT MeshPRT::UpdateLighting(){
-  HRESULT hr;
-    
-  return D3D_OK;
+	if(gDInput->mouseButtonDown(0)){
+		float dx = gDInput->mouseDX();
+		float dy = gDInput->mouseDY();
+		if(abs(dx) > 0.1f || abs(dy) > 0.1f) {
+			mPRTHierarchy->Rotate(dy/100.0f, -dx/100.0f, mCamera);
+			mPRTHierarchy->UpdateLighting(mCubeMap);
+			if(mVisualizeError || !mInterpolate) {
+				mPRTHierarchy->UpdateExactSHLighting(mCubeMap);
+			}
+		}
+	}
+
+	if(false) {
+		mPRTHierarchy->RotateY(dt);
+		mPRTHierarchy->RotateX(dt);
+		mPRTHierarchy->UpdateLighting(mCubeMap);
+		if(mVisualizeError || !mInterpolate) {
+			mPRTHierarchy->UpdateExactSHLighting(mCubeMap);
+		}
+	}
 }
 
 void MeshPRT::drawScene()
@@ -323,4 +351,30 @@ void MeshPRT::buildProjMtx()
   float w = (float)md3dPP.BackBufferWidth;
   float h = (float)md3dPP.BackBufferHeight;
   D3DXMatrixPerspectiveFovLH(&mProj, D3DX_PI * 0.25f, w/h, 1.0f, 5000.0f);
+}
+
+void MeshPRT::LoadCubeMap(int i){
+	HRESULT hr;
+	
+	SAFE_DELETE(mCubeMap);
+
+	mCubeMap = new CubeMap(gd3dDevice);
+
+	switch(i){
+	case 1: hr = mCubeMap->LoadCubeMap(L"cubemaps/", L"stpeters_cross", L".dds");
+		break;
+	case 2: hr = mCubeMap->LoadCubeMap(L"cubemaps/", L"galileo_cross", L".dds");
+		break;
+	case 3: hr = mCubeMap->LoadCubeMap(L"cubemaps/", L"grace_cross", L".dds");
+		break;
+	case 4: hr = mCubeMap->LoadCubeMap(L"cubemaps/", L"rnl_cross", L".dds");
+		break;	
+	default: hr = mCubeMap->LoadCubeMap(L"cubemaps/", L"stpeters_cross", L".dds");
+	}
+	 
+  PD(hr, L"load cube map");
+  if(FAILED(hr)) return;
+
+	mPRTHierarchy->UpdateLighting(mCubeMap);
+	mPRTHierarchy->UpdateExactSHLighting(mCubeMap);
 }

@@ -6,13 +6,18 @@ PRTHierarchy::PRTHierarchy(IDirect3DDevice9 *device) {
 
   mTimer = new Timer();
 
+	mRotationX = 0.0f;
+	mRotationY = 0.0f;
+	mRotationZ = 0.0f;
+	mBoudingSphereRadius = 10.0f;
+
+	D3DXMatrixIdentity(&mWorldTransform);
+
   mRenderMesh = 0;
   mApproxMesh = 0;
   mPRTEngine = 0;
   mPRTHierarchyMapping = 0;
   mOrder = 0;
-  D3DXMatrixIdentity(&mWorldTransform);
-
   mPRTHierarchyMapping = new PRTHierarchyMapping();
 }
 
@@ -46,10 +51,6 @@ HRESULT PRTHierarchy::LoadMeshHierarchy(WCHAR* renderMeshFile,
   PD(hr, L"load approx mesh file");
   if(FAILED(hr)) return hr;
 
-  hr = FillVertexVectors();
-  PD(hr, L"fill vertex vectors");
-  if(FAILED(hr)) return hr;
-   
   return D3D_OK;
 }
 
@@ -64,12 +65,11 @@ HRESULT PRTHierarchy::ScaleMeshes() {
   if(FAILED(hr)) return hr;
    
   D3DXVECTOR3 center;
-  float radius;
 
   hr = D3DXComputeBoundingSphere((D3DXVECTOR3*)pVertices, 
                                  d3dMesh->GetNumVertices(),
                                  d3dMesh->GetNumBytesPerVertex(), 
-                                 &center, &radius);
+                                 &center, &mBoudingSphereRadius);
 
   PD(hr, L"compute bounding sphere");
   if(FAILED(hr)) return hr;
@@ -78,10 +78,11 @@ HRESULT PRTHierarchy::ScaleMeshes() {
   PD(hr, L"unlock vertex buffer");
   if(FAILED(hr)) return hr;
 
-  PD(L"radius: ", radius);
+  PD(L"radius: ", mBoudingSphereRadius);
 
-  float scale = 10.0f/radius;
-  D3DXMatrixScaling(&mWorldTransform, scale, scale, scale); 
+  float scale = 10.0f/mBoudingSphereRadius;
+  D3DXMatrixScaling(&mScaleMatrix, scale, scale, scale);
+	UpdateTransformationMatrices();
 
   return D3D_OK;
 }
@@ -104,23 +105,20 @@ HRESULT PRTHierarchy::CalculateSHCoefficients() {
   return D3D_OK;
 }
 
-HRESULT PRTHierarchy::CalculateNNMapping(DWORD numNN) {
+HRESULT PRTHierarchy::CalculateMapping() {
 	HRESULT hr;
 
-	mRenderMesh->InitialiseMappingDatastructures(numNN);
+	mRenderMesh->InitialiseMappingDatastructures();
 	int* mappingIndices = mRenderMesh->GetMappingIndices();
 	float* mappingWeights = mRenderMesh->GetMappingWeights();
 
-	mPRTHierarchyMapping->NearestNeighbourMappingTree(numNN,
-                                                     mApproxMeshVertices,
-                                                     mRenderMeshVertices,
-                                                     mappingIndices,
-                                                     mappingWeights);
+	mPRTHierarchyMapping->GetMapping(
+			mRenderMesh,	mApproxMesh, mappingIndices, mappingWeights);
 
 	return D3D_OK;
 }
 
-HRESULT PRTHierarchy::InterpolateSHCoefficients(DWORD numNN) {
+HRESULT PRTHierarchy::InterpolateSHCoefficients() {
 	HRESULT hr;
 	ID3DXPRTCompBuffer* prtCompBuffer = mRenderMesh->GetPRTCompBuffer();
 	UINT numChannels = prtCompBuffer->GetNumChannels();
@@ -139,14 +137,18 @@ HRESULT PRTHierarchy::InterpolateSHCoefficients(DWORD numNN) {
 	bool debug = false;
 		
 	for(int i = 0; i < numRenderMeshVertices; ++i) {
+		if(i==12207) debug=true;
+		else debug = false;
+		
 		UINT stride = numCoeffs * numChannels;
 		for(int j = 0; j < numCoeffs; ++j) {
 			float redCoeff = 0.0f;
 			float greenCoeff = 0.0f;
 			float blueCoeff = 0.0f;
 			
-			for(int k = 0; k < numNN; ++k) {
-				UINT index = mappingIndices[i*numNN + k];
+			for(int k = 0; k < 3; ++k) {
+				float weight = mappingWeights[i*3 + k];
+				UINT index = mappingIndices[i*3 + k];
 				if(index < 0 || index >= numApproxMeshVertices) {
 					PD(L"error nn index out of bounds");
 					return -1;
@@ -155,7 +157,7 @@ HRESULT PRTHierarchy::InterpolateSHCoefficients(DWORD numNN) {
 				float redApprox   = approxSHCoeff[index*stride + 0*numCoeffs + j];
 				float greenApprox = approxSHCoeff[index*stride + 1*numCoeffs + j];
 				float blueApprox  = approxSHCoeff[index*stride + 2*numCoeffs + j];
-				float weight = mappingWeights[i*numNN + k];
+				
 								
 				redCoeff   += weight * redApprox;
 				greenCoeff += weight * greenApprox;
@@ -171,8 +173,8 @@ HRESULT PRTHierarchy::InterpolateSHCoefficients(DWORD numNN) {
 			}
 			
 			if(debug) PD(L"final redCoeff: ", redCoeff);
-			if(debug) PD(L"final redCoeff: ", greenCoeff);
-			if(debug) PD(L"final redCoeff: ", blueCoeff);
+			if(debug) PD(L"final greenCoeff: ", greenCoeff);
+			if(debug) PD(L"final blueCoeff: ", blueCoeff);
 
 			interpolSHCoeff[i*stride + 0*numCoeffs + j] = redCoeff;
 			interpolSHCoeff[i*stride + 1*numCoeffs + j] = greenCoeff;
@@ -183,15 +185,21 @@ HRESULT PRTHierarchy::InterpolateSHCoefficients(DWORD numNN) {
 	return D3D_OK;
 }
 
-HRESULT PRTHierarchy::TransferSHDataToGPU(DWORD numNN, bool interpolate) {
+HRESULT PRTHierarchy::UpdateExactSHLighting(LightSource* lightSource) {
+	mPRTEngine->UpdateExactSHLighting(mRenderMesh, lightSource);
+	return D3D_OK;
+}
+
+HRESULT PRTHierarchy::TransferSHDataToGPU() {
 	HRESULT hr;
 
-	mRenderMesh->FillVertexBufferWithSHCoefficients(numNN, interpolate);
+	mRenderMesh->FillVertexBufferWithSHCoefficients();
 
 	return D3D_OK;
 }
 
 HRESULT PRTHierarchy::CheckColor(LightSource* lightSource) {
+	mPRTEngine->CheckCalculatedSHCoefficients(mApproxMesh, lightSource);
 	mPRTEngine->CheckCalculatedSHCoefficients(mRenderMesh, lightSource);
 
 	return D3D_OK;
@@ -203,57 +211,26 @@ HRESULT PRTHierarchy::UpdateLighting(LightSource* lightSource) {
   UINT numCoeffs = mOrder * mOrder;
 
   lightSource->CalculateSHCoefficients(mOrder);
-
-  mEffect->SetFloatArray("redSHCoeffsLight", lightSource->GetSHCoeffsRed(), numCoeffs);
-  mEffect->SetFloatArray("greenSHCoeffsLight", lightSource->GetSHCoeffsGreen(), numCoeffs);
-  mEffect->SetFloatArray("blueSHCoeffsLight", lightSource->GetSHCoeffsBlue(), numCoeffs);
+ 
+	float red[D3DXSH_MAXORDER*D3DXSH_MAXORDER];
+	float green[D3DXSH_MAXORDER*D3DXSH_MAXORDER];
+	float blue[D3DXSH_MAXORDER*D3DXSH_MAXORDER];
+	lightSource->GetSHCoeffsRed(mRenderMesh, red);
+	lightSource->GetSHCoeffsGreen(mRenderMesh, green);
+	lightSource->GetSHCoeffsBlue(mRenderMesh, blue);
+	mEffect->SetFloatArray("redSHCoeffsLight", red, numCoeffs);
+  mEffect->SetFloatArray("greenSHCoeffsLight", green, numCoeffs);
+  mEffect->SetFloatArray("blueSHCoeffsLight", blue, numCoeffs);
   mEffect->CommitChanges();
 
-  return D3D_OK;
-}
-
-HRESULT PRTHierarchy::FillVertexVectors() {
-  HRESULT hr;
-
-  hr = FillVertexVector(mRenderMeshVertices, mRenderMesh);
-  PD(hr, L"fill render mesh vertex vector");
-  if(FAILED(hr)) return hr;
-
-  hr = FillVertexVector(mApproxMeshVertices, mApproxMesh);
-  PD(hr, L"fill approx mesh vertex vector");
-  if(FAILED(hr)) return hr;
-
-  PD(L"size of render mesh vertex vector: ", (int)mRenderMeshVertices.size());
-  PD(L"size of approx mesh vertex vector: ", (int)mApproxMeshVertices.size());
-
-  return D3D_OK;
-}
-
-HRESULT PRTHierarchy::FillVertexVector(std::vector<Vertex> &vec, Mesh* mesh) {
-  HRESULT hr;
-
-  ID3DXMesh* d3dMesh = mesh->GetMesh();
-
-  FULL_VERTEX *pVertices = NULL;
-  hr = d3dMesh->LockVertexBuffer(0, (void**)&pVertices);
-  PD(hr, L"lock vertex buffer");
-  if(FAILED(hr)) return hr;
-
-  for ( DWORD i = 0; i < d3dMesh->GetNumVertices(); ++i ) {
-    Vertex vertex;
-    vertex.pos.x = pVertices[i].position.x;
-    vertex.pos.y = pVertices[i].position.y;
-    vertex.pos.z = pVertices[i].position.z;
-    vertex.normal.x = pVertices[i].normal.x;
-    vertex.normal.y = pVertices[i].normal.y;
-    vertex.normal.z = pVertices[i].normal.z;
-    vec.push_back(vertex);
-  }
-
-  hr = d3dMesh->UnlockVertexBuffer();
-  PD(hr, L"unlock vertex buffer");
-  if(FAILED(hr)) return hr;
-
+	/*
+	float* red = lightSource->GetSHCoeffsRed(mRenderMesh);
+	float* green = lightSource->GetSHCoeffsGreen(mRenderMesh);
+	float* blue = lightSource->GetSHCoeffsBlue(mRenderMesh);
+	mEffect->SetFloatArray("redSHCoeffsLight", red, numCoeffs);
+  mEffect->SetFloatArray("greenSHCoeffsLight", green, numCoeffs);
+  mEffect->SetFloatArray("blueSHCoeffsLight", blue, numCoeffs);
+	*/
   return D3D_OK;
 }
 
@@ -268,7 +245,7 @@ bool PRTHierarchy::HasTextures() {
 }
 
 void PRTHierarchy::DrawMesh() {
-  mRenderMesh->SetWorldTransform(&mWorldTransform);
+  mRenderMesh->SetWorldTransformation(mWorldTransform);
   mRenderMesh->DrawMesh();
 }
 
@@ -280,13 +257,76 @@ int PRTHierarchy::GetNumFaces() {
   return mRenderMesh->GetNumFaces();
 }
 
-void PRTHierarchy::UpdateState(bool renderError, bool interpolate, DWORD numNN) {
+void PRTHierarchy::UpdateState(bool renderError, bool interpolate) {
 	PD(L"update state");
 	PD(L"interpolate: ", interpolate);
 	PD(L"renderError: ", renderError);
 
-	mRenderMesh->FillVertexBufferWithSHCoefficients(numNN, interpolate);
+	mRenderMesh->FillVertexBufferWithSHCoefficients();
 	
 	mEffect->SetBool("renderError", renderError);
+	mEffect->SetBool("renderExact", !interpolate);
 	mEffect->CommitChanges();
+}
+
+void PRTHierarchy::RotateX(float dw) {
+	mRotationX += dw;
+	mRotationX = CheckAngleRange(mRotationX);
+	UpdateTransformationMatrices();
+}
+
+void PRTHierarchy::RotateY(float dw) {
+	mRotationY += dw;
+	mRotationY = CheckAngleRange(mRotationY);
+	UpdateTransformationMatrices();
+}
+
+void PRTHierarchy::RotateZ(float dw) {
+	mRotationZ += dw;
+	mRotationZ = CheckAngleRange(mRotationZ);
+	UpdateTransformationMatrices();
+}
+
+void PRTHierarchy::Rotate(float dx, float dy, Camera* camera) {
+	D3DXVECTOR3 cameraPos = camera->pos();
+	D3DXVECTOR3 zAxis = D3DXVECTOR3(0.0f, 0.0f, 1.0f);
+	
+	D3DXMATRIX rotY;
+	D3DXMatrixRotationY(&rotY, mRotationY);
+	
+	D3DXVECTOR4 tempAxis;
+	D3DXVec3Transform(&tempAxis, &zAxis, &rotY);
+	D3DXVECTOR3 rotatedZAxis = D3DXVECTOR3(tempAxis.x, tempAxis.y, tempAxis.z);
+
+	mRotationY = mRotationY +  dy;
+	
+	int sign = D3DXVec3Dot(&cameraPos, &rotatedZAxis) >= 0 ? 1 : -1;
+	mRotationX = mRotationX + sign * dx;
+
+	UpdateTransformationMatrices();
+}
+
+float PRTHierarchy::CheckAngleRange(float dw) {
+	if(dw >= 2.0f * D3DX_PI) {
+		dw -= 2.0f * D3DX_PI;
+	}
+	if(dw <= 2.0f * D3DX_PI) {
+		dw += 2.0f * D3DX_PI;
+	}
+	return dw;
+}
+
+void PRTHierarchy::UpdateTransformationMatrices() {
+	D3DXMATRIX rotX, rotY, rotYInverse;
+	D3DXMatrixRotationY(&rotY, mRotationY);
+	D3DXMatrixRotationX(&rotX, mRotationX);
+	
+	D3DXMatrixIdentity(&mWorldTransform);
+
+	D3DXMATRIX rot = rotX * rotY;
+	mWorldTransform = mScaleMatrix * rot;
+	mRenderMesh->SetWorldTransformation(mWorldTransform);
+	mApproxMesh->SetWorldTransformation(mWorldTransform);
+	mRenderMesh->SetRotationMatrix(rot);
+	mApproxMesh->SetRotationMatrix(rot);
 }

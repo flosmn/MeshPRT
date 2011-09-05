@@ -3,6 +3,7 @@
 
 #include "d3dUtil.h"
 #include "LightSource.h"
+#include "Mesh.h"
 
 class Light : public LightSource 
 {
@@ -12,6 +13,10 @@ public:
   virtual ~Light();
 
   HRESULT CalculateSHCoefficients(DWORD order);
+	
+	void GetSHCoeffsRed(Mesh* mesh, float* red) { red = mSHCoeffsRed; }
+	void GetSHCoeffsGreen(Mesh* mesh, float* green) { green = mSHCoeffsGreen; }
+	void GetSHCoeffsBlue(Mesh* mesh, float* blue) { blue = mSHCoeffsBlue; }
 
   D3DXVECTOR3 GetLightDirection() { return mLightDirection; }
   D3DXVECTOR3 GetLightPosition() { return mLightPosition; }

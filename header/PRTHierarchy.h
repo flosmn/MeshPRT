@@ -8,6 +8,7 @@
 #include "LightSource.h"
 #include "Timer.h"
 #include "NNMapping.h"
+#include "Camera.h"
 
 
 class PRTHierarchy{
@@ -20,11 +21,13 @@ public:
 
   HRESULT CalculateSHCoefficients();
 
-  HRESULT CalculateNNMapping(DWORD numberOfNearestNeightbours);
+  HRESULT CalculateMapping();
 
-	HRESULT InterpolateSHCoefficients(DWORD numberOfNearestNeightbours);
+	HRESULT UpdateExactSHLighting(LightSource* lightSource);
 
-  HRESULT TransferSHDataToGPU(DWORD numberOfNearestNeightbours, bool interpolate);
+	HRESULT InterpolateSHCoefficients();
+
+  HRESULT TransferSHDataToGPU();
 
   HRESULT UpdateLighting(LightSource* lightSource);
 
@@ -32,7 +35,7 @@ public:
 
   HRESULT CheckColor(LightSource* lightSource);
 
-	void UpdateState(bool visualizeError, bool interpolate, DWORD numNN);
+	void UpdateState(bool visualizeError, bool interpolate);
 
   bool HasTextures();
   void DrawMesh();
@@ -43,10 +46,16 @@ public:
   Mesh* GetRenderMesh() { return mRenderMesh; }
   Mesh* GetApproxMesh() { return mApproxMesh; }
 
-private:
-  HRESULT FillVertexVectors();  
-  HRESULT FillVertexVector(std::vector<Vertex> &vec, Mesh* mesh);
-    
+	void RotateX(float dw);
+	void RotateY(float dw);
+	void RotateZ(float dw);
+
+	void Rotate(float dx, float dy, Camera* camera);
+
+private:  
+	void UpdateTransformationMatrices();
+	float CheckAngleRange(float dw);
+
   IDirect3DDevice9 *mDevice;
   ID3DXEffect* mEffect;
   Mesh* mRenderMesh;
@@ -55,15 +64,16 @@ private:
   PRTHierarchyMapping* mPRTHierarchyMapping;
 
   Timer* mTimer;
-  
-  std::vector<Vertex> mRenderMeshVertices;
-  std::vector<Vertex> mApproxMeshVertices;
-  std::vector<D3DXVECTOR3> mRenderMeshVertexNormals;
-  std::vector<D3DXVECTOR3> mApproxMeshVertexNormals;
-    
+      
   DWORD mOrder;
+
+	float mBoudingSphereRadius;
   
+	float mRotationX;
+	float mRotationY;
+	float mRotationZ;
   D3DXMATRIX mWorldTransform;
+	D3DXMATRIX mScaleMatrix;
 };
 
 #endif // PRTHIERARCHY_H

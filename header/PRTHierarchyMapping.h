@@ -10,22 +10,13 @@ public:
   PRTHierarchyMapping();
   ~PRTHierarchyMapping();
   
-  void NearestNeighbourMappingNaive( std::vector<Vertex> approxMeshVertices,
-                                     std::vector<Vertex> renderMeshVertices,
-                                     std::vector<D3DXCOLOR> approxMeshVertexColors,
-                                     std::vector<D3DXCOLOR> &renderMeshVertexColors);
+  void GetMapping( Mesh* renderMesh, Mesh* approxMesh, 
+									 int* mappingIndices, float* mappingWeights);
 
-  void NearestNeighbourMappingTree( int numberOfNearestNeighbours,
-                                    std::vector<Vertex> &approxMeshVertices,
-                                    std::vector<Vertex> &renderMeshVertices,
-                                    int* mappingIndices,
-									float* mappingWeights);
 private:
-  DWORD GetNNNaive(Vertex v, std::vector<Vertex> vertices);
-
   bool Equals(Vertex v, Vertex u);
 
-  void InitArrays(int numberOfNearestNeighbours);
+  void InitArrays();
   void FreeArrays();
 
   float GetDistance(Vertex v, Vertex u);

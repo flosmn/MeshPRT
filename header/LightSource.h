@@ -1,11 +1,13 @@
 #ifndef LIGHTSOURCE_H
 #define LIGHTSOURCE_H
 
+#include "Mesh.h"
+
 class LightSource {
 public:
- float* GetSHCoeffsRed(){ return mSHCoeffsRed; }
- float* GetSHCoeffsGreen(){ return mSHCoeffsGreen; }
- float* GetSHCoeffsBlue() { return mSHCoeffsBlue; }
+	virtual void GetSHCoeffsRed(Mesh* mesh, float* red) = 0;
+	virtual void GetSHCoeffsGreen(Mesh* mesh, float* green) = 0;
+	virtual void GetSHCoeffsBlue(Mesh* mesh, float* blue) = 0;
 
  virtual HRESULT CalculateSHCoefficients(DWORD order) = 0;
 

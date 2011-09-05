@@ -68,7 +68,9 @@ HRESULT CubeMap::LoadCubeMap(WCHAR* directory, WCHAR* name, WCHAR* extension){
 HRESULT CubeMap::CalculateSHCoefficients(DWORD order) {
   HRESULT hr;
 
-  hr = D3DXSHProjectCubeMap( order, 
+	mOrder = order;
+
+  hr = D3DXSHProjectCubeMap( mOrder, 
                              mCubeTexture, 
                              mSHCoeffsRed, 
                              mSHCoeffsGreen, 
@@ -140,4 +142,21 @@ HRESULT CubeMap::FillVertexBuffer() {
   if(FAILED(hr)) return hr;
 
   return D3D_OK;
+}
+
+void CubeMap::GetTransformedCoeffs(Mesh* mesh, float* target, float* coeffs) {
+	D3DXMATRIX rotInverse =  mesh->GetRotationInverseMatrix();
+	D3DXSHRotate( target, mOrder, &rotInverse, coeffs );
+}
+
+void CubeMap::GetSHCoeffsRed(Mesh* mesh, float* red) {
+	GetTransformedCoeffs(mesh, red, mSHCoeffsRed);
+}
+
+void CubeMap::GetSHCoeffsGreen(Mesh* mesh, float* green) {
+	GetTransformedCoeffs(mesh, green, mSHCoeffsGreen);
+}
+
+void CubeMap::GetSHCoeffsBlue(Mesh* mesh, float* blue) {
+	GetTransformedCoeffs(mesh, blue, mSHCoeffsBlue);
 }

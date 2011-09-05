@@ -1,13 +1,17 @@
 #include "K3Tree.h"
 
-K3Tree::K3Tree(std::vector<Vertex> &vertices) {
+K3Tree::K3Tree(Mesh* renderMesh,	Mesh* approxMesh) {
   mQueryRadius = 0.0f;
   mQueryEpsilon = 0.0f;
   mBoundingBoxVolume = 0.0f;
 	mDistanceScaling = 0.0f;
-	mInterpolator = new Interpolator();
+	//mInterpolator = new InterpolatorTopology(approxMesh, renderMesh);
+	//mInterpolator = new InterpolatorKNN();
+	//mInterpolator = new InterpolatorSimple();
+	mInterpolator = new InterpolatorDistance2();
   mDebug = false;
-  mVertices = vertices;
+	mRenderMesh = renderMesh;
+	mApproxMesh = approxMesh;
   mTree = 0;      
   mTree = kd_create(3);
 }
@@ -18,24 +22,29 @@ K3Tree::~K3Tree() {
 }
 
 void K3Tree::FillTreeWithData() {
-  mNumVertices = mVertices.size();
+	mNumVertices = mApproxMesh->GetNumVertices();
+	Vertex* vertices = mApproxMesh->GetVertices();
 
-  for ( int i = 0; i < mVertices.size(); ++i ) {
-    mIndex[mVertices[i]] = -1;
+  for ( int i = 0; i < mNumVertices; ++i ) {
+    mIndex[vertices[i]] = -1;
   }
 
   Vertex smallestPoint, biggestPoint;
   smallestPoint.pos.x = smallestPoint.pos.y = smallestPoint.pos.z = FLT_MAX;
   biggestPoint.pos.x = biggestPoint.pos.y = biggestPoint.pos.z = FLT_MIN;
   
-  for ( int i = 0; i < mVertices.size(); ++i ) {
-    if(mIndex[mVertices[i]] == -1) {
-      mIndex[mVertices[i]] = i;
+  for ( int i = 0; i < mNumVertices; ++i ) {
+    if(mIndex[vertices[i]] == -1) {
+      mIndex[vertices[i]] = i;
     }
+		else{
+			PD(L"override index entry at vertex ", i);
+			PD(L"index entry already here is ", mIndex[vertices[i]]);
+		}
 
-    float x = mVertices[i].pos.x;
-    float y = mVertices[i].pos.y;
-    float z = mVertices[i].pos.z;
+    float x = vertices[i].pos.x;
+    float y = vertices[i].pos.y;
+    float z = vertices[i].pos.z;
     
     if(x < smallestPoint.pos.x) smallestPoint.pos.x = x;
     if(y < smallestPoint.pos.y) smallestPoint.pos.y = y;
@@ -48,16 +57,16 @@ void K3Tree::FillTreeWithData() {
     // debug
     if(mDebug) {
       PD(L"vertex ", i);
-      PD(L"index: ", mIndex[mVertices[i]]);
+      PD(L"index: ", mIndex[vertices[i]]);
       PD(L"pos x: ", x);
       PD(L"pos y: ", y);
       PD(L"pos z: ", z);
-      PD(L"norm x: ", mVertices[i].normal.x);
-      PD(L"norm y: ", mVertices[i].normal.y);
-      PD(L"norm z: ", mVertices[i].normal.z);
+      PD(L"norm x: ", vertices[i].normal.x);
+      PD(L"norm y: ", vertices[i].normal.y);
+      PD(L"norm z: ", vertices[i].normal.z);
     }
 
-    kd_insert3f(mTree, x, y, z, &mVertices[i]);   
+    kd_insert3f(mTree, x, y, z, &vertices[i]);   
   }
 
   float dx = abs(biggestPoint.pos.x - smallestPoint.pos.x);
@@ -83,12 +92,9 @@ void K3Tree::ComputeInitialQueryRadiusAndEpsilon() {
 	PD(L"distance scaling: ", mDistanceScaling);
 }
 
-void K3Tree::GetNearestNeighbours(Vertex v, 
-                                  int* indices,
-																	float* weights,
-                                  int numberOfNearestNeigbours)
+void K3Tree::GetMapping(Vertex v, int* indices,	float* weights)
 {
-  int K = numberOfNearestNeigbours;
+  int K = 3;
 	
   kdres *resultSet = kd_nearest_range3f(mTree,
                                         v.pos.x,
@@ -99,7 +105,7 @@ void K3Tree::GetNearestNeighbours(Vertex v,
   if(kd_res_size(resultSet) < 2 * K) {
     mQueryRadius += 0.5f * mQueryEpsilon;
 		if(mDebug) PD(L"query radius: ", mQueryRadius);
-    GetNearestNeighbours(v, indices, weights, K);
+    GetMapping(v, indices, weights);
   }
   else{
     GetNearestNeighboursFromResultSet(v, indices, weights, K, resultSet);
@@ -133,7 +139,7 @@ void K3Tree::GetNearestNeighboursFromResultSet(Vertex v,
   }
 
 	bool debug = false;
-	if(mDebug) PD(L"nearest neighbours candidates for vertex ",mIndex[v]);
+	if(mDebug) PD(L"nearest neighbours candidates for vertex ");
 	
 	for(int i = 0; i < kd_res_size(resultSet); ++i) {
 		int index = -1;
@@ -144,7 +150,7 @@ void K3Tree::GetNearestNeighboursFromResultSet(Vertex v,
     index = mIndex[nn];
 
 		if(mDebug) {
-			PD(L"candidate: index", index);
+			PD(L"candidate: ", index);
 			PD(L"Red, Point[{", nn.pos.x);
 			PD(L",", nn.pos.y);
 			PD(L",", nn.pos.z);
@@ -153,8 +159,7 @@ void K3Tree::GetNearestNeighboursFromResultSet(Vertex v,
     
 		float value = GetValue(v, nn);
 		if (value > candidates[K-1].value) {
-      if(mDebug) PD(L"found better candidate: ", index);
-			candidates[K-1].vertex = nn;
+      candidates[K-1].vertex = nn;
       candidates[K-1].index = index;
       candidates[K-1].value = value;
       Sort(candidates, K);
@@ -163,23 +168,8 @@ void K3Tree::GetNearestNeighboursFromResultSet(Vertex v,
     kd_res_next(resultSet);
   }
 
-	//mInterpolator->GetInterpolationWeight(candidates, v);
-	float sum = 0.0f;
-	for(int i=0; i<K; ++i){
-		indices[i] = candidates[i].index;
-		weights[i] = candidates[i].value;
-		sum += weights[i];
-	}
-	if(sum == 0.0f){
-		sum = 3.0f;
-		weights[0] = 1.0f;
-		weights[1] = 1.0f;
-		weights[2] = 1.0f;
-	}
-	for(int i=0; i<K; ++i){
-		weights[i] = weights[i] / sum;
-	}
-
+	mInterpolator->GetInterpolationWeight(candidates, indices, weights, v);
+	
 	delete [] candidates;
 }
 
@@ -220,8 +210,8 @@ float K3Tree::GetDistance(Vertex v, Vertex u) {
 
 float K3Tree::GetValue(Vertex v, Vertex u) {
 	float value = 0.0f;
-	float p = 0.2f;
-	float q = 0.8f;
+	float p = 0.5f;
+	float q = 0.5f;
 	float normDist = GetDistance(v,u) / mDistanceScaling;
 	float dotProd = DotProd(v.normal, u.normal);
 

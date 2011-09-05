@@ -8,7 +8,7 @@ sampler Sampler = sampler_state
     Texture = (g_Texture);
     MipFilter = LINEAR;
     MinFilter = LINEAR;
-    MagFilter = POINT;
+    MagFilter = LINEAR;
 };
 
 struct VS_Input

@@ -1,5 +1,6 @@
 bool useTextures;
-bool renderError = false;
+extern bool renderError = false;
+extern bool renderExact = false;
 
 uniform extern float4x4 gWorld;
 uniform extern float4x4 gView;
@@ -17,7 +18,25 @@ uniform extern texture AlbedoTex;
 uniform extern texture EnvMap;
 
 float4 CalculateError(float4 c1, float4 c2) {
-	return float4(1.0f, 0.0f, 0.0f, 1.0f);
+	float diff = 1.0f/3.0f * (sqrt(abs(c1.r-c2.r))+sqrt(abs(c1.g-c2.g))+sqrt(abs(c1.b-c2.b)));
+
+	// heatmap colors
+	float4 colors[3];
+    colors[0] = float4(0, 0, 1.0f, 1.0f);
+    colors[1] = float4(1.0f, 1.0f, 0, 1.0f);
+    colors[2] = float4(1.0f, 0, 0, 1.0f);
+        
+    float4 error = float4(0.0f,0.0f,0.0f,1.0f);
+	
+	int ix = diff < 0.5f ? 0 : 1;
+
+	if(ix == 0){    
+		error = lerp(colors[0], colors[1], 2*diff-ix);	
+	}
+	if(ix == 1){
+		error = lerp(colors[ix], colors[ix+1], 2*diff-ix);	
+	}
+	return error;
 }
 
 sampler Sampler = sampler_state
@@ -49,7 +68,7 @@ OutputPrtLightingVS PRTDiffuseVS( float3 posL : POSITION0,
 								  float3 normalL : NORMAL0, 
 								  float2 in_tex : TEXCOORD0,
 								  float3 shCoeffs[NUM_COEFFICIENTS] : BLENDWEIGHT0,
-								  float3 shColor : POSITION2,
+								  float3 in_exactSHColor : POSITION2,
 								  float3 in_index : POSITION3)
 {
     OutputPrtLightingVS outVS;
@@ -64,9 +83,7 @@ OutputPrtLightingVS PRTDiffuseVS( float3 posL : POSITION0,
 	outVS.posH = mul(outVS.posH, gView);
 	outVS.posH = mul(outVS.posH, gProjection);
     
-	float4 color = float4(0.0f, 0.0f, 0.0f, 1.0f);
-	
-	float index = in_index.x;
+	float4 color = float4(0.0f, 0.0f, 0.0f, in_index.x);
 
 	for(int i = 0; i < NUM_COEFFICIENTS; ++i) {
 		color += float4(redSHCoeffsLight[i]   * shCoeffs[i].r,
@@ -74,10 +91,10 @@ OutputPrtLightingVS PRTDiffuseVS( float3 posL : POSITION0,
 						blueSHCoeffsLight[i]  * shCoeffs[i].b,
 						0.0f);
 	}
-
-	outVS.Diffuse = color + float4(0.0f, 0.0f, 0.0f, index);
 	
-	if(renderError) outVS.Diffuse = float4(1.0f, 1.0f, 0.0f, 1.0f);
+	outVS.Diffuse = color;
+	if(renderExact) outVS.Diffuse = float4(in_exactSHColor, 1.0f);
+	if(renderError) outVS.Diffuse = CalculateError(color, float4(in_exactSHColor, 1.0f));
 			
 	if( useTextures ) {
 		outVS.tex = in_tex;

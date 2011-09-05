@@ -3,6 +3,10 @@
 
 #include "kdtree.h"
 #include "Interpolator.h"
+#include "InterpolatorSimple.h"
+#include "InterpolatorDistance2.h"
+#include "InterpolatorKNN.h"
+#include "InterpolatorTopology.h"
 #include "Mesh.h"
 #include "d3dUtil.h"
 #include "Structs.h"
@@ -13,13 +17,13 @@
 
 class K3Tree {
 public:
-  K3Tree(std::vector<Vertex> &vertices);
+  K3Tree( Mesh* renderMesh,
+					Mesh* approxMesh);
   ~K3Tree();
 
-  void GetNearestNeighbours(Vertex v,
-                            int* indices,
-							float* weights,
-                            int numberOfNearestNeighbours);
+  void GetMapping(Vertex v,
+                  int* indices,
+									float* weights);
 
   void FillTreeWithData();
 
@@ -56,11 +60,13 @@ private:
 
 	float mDistanceScaling;
   
-  std::vector<Vertex> mVertices;
   std::map<Vertex, int, Vertex> mIndex;
   
   kdtree *mTree;
 	Interpolator* mInterpolator;
+
+	Mesh* mRenderMesh;
+	Mesh* mApproxMesh;
 
 	bool mDebug;
 };

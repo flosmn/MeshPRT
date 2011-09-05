@@ -12,9 +12,7 @@ public:
 	const D3DXMATRIX& view() const;
 	D3DXVECTOR3& pos();
 	void setSpeed(float s);
-
 	void update(float dt);
-
 protected:
 	void buildView();
 

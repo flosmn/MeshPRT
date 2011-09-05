@@ -16,16 +16,18 @@ public:
   HRESULT LoadMesh(WCHAR* directory, WCHAR* name, WCHAR* extension);
   HRESULT LoadMesh(ID3DXMesh* mesh);
   
+	HRESULT CreateTopologyFromMesh();
+
   void DrawMesh();
   void LoadFX(ID3DXEffect *effect);
      
   DWORD GetNumVertices();
   DWORD GetNumFaces();
       
-  void InitialiseMappingDatastructures(DWORD numNN);
+  void InitialiseMappingDatastructures();
   void InitialiseSHDataStructures();
 
-  HRESULT FillVertexBufferWithSHCoefficients(DWORD numNN, bool interpolate);
+  HRESULT FillVertexBufferWithSHCoefficients();
 
   int* GetMappingIndices() { return mMappingIndices; }
   float* GetMappingWeights() { return mMappingWeights; }
@@ -52,18 +54,32 @@ public:
   
   D3DXCOLOR GetDiffuseMaterial(int i);
 
+	Vertex* GetVertices() { return mVertices; }
+	DWORD* GetFaces() { return mFaces; }
+
+	std::vector<DWORD>* GetVertexFaceAdjazency() { return mVertexFaceAdjazency; }
+
   void SetDirectory(WCHAR* dir) { directory = dir; } 
   WCHAR* GetDirectory() { return directory; }
 
   void SetName(WCHAR* _name) { name = _name; } 
   WCHAR* GetName() { return name; }
 
-  void SetWorldTransform(D3DXMATRIX* matrix) {
-    mWorld = *matrix;
-  }
-
   IDirect3DTexture9* GetTextures() { return mTextures[0]; }
   bool HasTextures() { return hasTextures; }
+
+	D3DXMATRIX GetWorldTransformation() { return mWorld; }
+	D3DXMATRIX GetRotationMatrix() { return mRotation; };
+	D3DXMATRIX GetRotationInverseMatrix() { return mRotationInverse; }
+
+	void SetWorldTransformation(D3DXMATRIX matrix) {
+    mWorld = matrix;
+  }
+
+	void SetRotationMatrix(D3DXMATRIX matrix) {
+    mRotation = matrix;
+		D3DXMatrixInverse(&mRotationInverse, 0, &matrix);
+  }
 
 protected:
   HRESULT AdjustMeshDecl();
@@ -83,12 +99,10 @@ protected:
 
   std::vector<IDirect3DTexture9*> mTextures;
   bool hasTextures;
-
-  float mRotationX;
-  float mRotationY;
-  float mRotationZ;
     
   D3DXMATRIX  mWorld;
+	D3DXMATRIX  mRotation;
+	D3DXMATRIX  mRotationInverse;
   D3DXCOLOR   mDiffuseMtrl[3];
 		
   D3DXHANDLE   mhWorld;
@@ -107,6 +121,10 @@ protected:
 
   WCHAR* directory;
   WCHAR* name;
+
+	DWORD* mFaces;
+	Vertex* mVertices;
+	std::vector<DWORD>* mVertexFaceAdjazency;
 };
 
 #endif // MESH_H

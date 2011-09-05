@@ -16,15 +16,16 @@ Mesh::Mesh(IDirect3DDevice9 *device)
   mClusterIds = 0;
   mMappingIndices = 0;
   mMappingWeights = 0;
+	mVertices = 0;
+	mFaces = 0;
+	mVertexFaceAdjazency = 0;
 
   hasTextures = false;
   mMesh = 0;  
-  mRotationX = 0;
-  mRotationY = 0;
-  mRotationZ = 0;  
   
   mDevice = device;
   D3DXMatrixIdentity(&mWorld);
+	D3DXMatrixIdentity(&mRotation);
 
   mDiffuseMtrl[0].r = 1.0f;
   mDiffuseMtrl[0].g = 1.0f;
@@ -43,9 +44,9 @@ Mesh::Mesh(IDirect3DDevice9 *device)
 
 }
 
-void Mesh::InitialiseMappingDatastructures(DWORD numNN) {
-	mMappingIndices = new int[GetNumVertices() * numNN];
-	mMappingWeights = new float[GetNumVertices() * numNN];
+void Mesh::InitialiseMappingDatastructures() {
+	mMappingIndices = new int[GetNumVertices() * 3];
+	mMappingWeights = new float[GetNumVertices() * 3];
 }
 
 void Mesh::InitialiseSHDataStructures() {
@@ -261,8 +262,55 @@ HRESULT Mesh::LoadMesh(WCHAR* directory, WCHAR* name, WCHAR* extension)
   PD( AdjustMeshDecl(), L"adjust mesh delaration" );
   PD( AttribSortMesh(), L"attribute sort mesh" );
   PD( LoadTextures(), L"load textures" );
-  
+	PD( CreateTopologyFromMesh(), L"create topology from mesh");
   return D3D_OK;
+}
+
+HRESULT Mesh::CreateTopologyFromMesh() {
+	HRESULT hr;
+	mVertices = new Vertex[GetNumVertices()];
+	mFaces = new DWORD[3*GetNumFaces()];
+	mVertexFaceAdjazency = new std::vector<DWORD>[GetNumVertices()];
+
+	FULL_VERTEX *pVertices = NULL;
+  hr = mMesh->LockVertexBuffer(0, (void**)&pVertices);
+  PD(hr, L"lock vertex buffer");
+  if(FAILED(hr)) return hr;
+
+  for ( DWORD i = 0; i < mMesh->GetNumVertices(); ++i ) {
+    Vertex vertex;
+    vertex.pos.x = pVertices[i].position.x;
+    vertex.pos.y = pVertices[i].position.y;
+    vertex.pos.z = pVertices[i].position.z;
+    vertex.normal.x = pVertices[i].normal.x;
+    vertex.normal.y = pVertices[i].normal.y;
+    vertex.normal.z = pVertices[i].normal.z;
+    mVertices[i] = vertex;
+  }
+
+  hr = mMesh->UnlockVertexBuffer();
+  PD(hr, L"unlock vertex buffer");
+  if(FAILED(hr)) return hr;
+
+	DWORD* pIndexBuffer = NULL;
+	hr = mMesh->LockIndexBuffer( 0, ( void** )&pIndexBuffer );
+	PD(hr, L"lock index buffer");
+	if(FAILED(hr)) return hr;
+
+	for( DWORD j = 0; j < GetNumFaces(); j++ )
+	{		
+		mFaces[j*3+0] = pIndexBuffer[j*3+0];
+		mFaces[j*3+1] = pIndexBuffer[j*3+1];
+		mFaces[j*3+2] = pIndexBuffer[j*3+2];
+
+		mVertexFaceAdjazency[pIndexBuffer[j*3+0]].push_back(j);
+		mVertexFaceAdjazency[pIndexBuffer[j*3+1]].push_back(j);
+		mVertexFaceAdjazency[pIndexBuffer[j*3+2]].push_back(j);
+	}
+
+	hr = mMesh->UnlockIndexBuffer();
+	PD(hr, L"unlock index buffer");
+	if(FAILED(hr)) return hr;
 }
 
 HRESULT Mesh::LoadMesh(ID3DXMesh* mesh){
@@ -334,7 +382,7 @@ HRESULT Mesh::LoadTextures()
   return D3D_OK;
 }
 
-HRESULT Mesh::FillVertexBufferWithSHCoefficients(DWORD numNN, bool interpolate) {
+HRESULT Mesh::FillVertexBufferWithSHCoefficients() {
 	HRESULT hr;
 	
 	UINT numPCA = mPRTCompBuffer->GetNumPCA();
@@ -344,8 +392,7 @@ HRESULT Mesh::FillVertexBufferWithSHCoefficients(DWORD numNN, bool interpolate) 
 	UINT numVertices = mPRTCompBuffer->GetNumSamples();
 
 	float* shCoefficients = mInterpolatedSHCoefficients;
-	if(!interpolate) shCoefficients = mSHCoefficients;
-		
+			
 	FULL_VERTEX* pVertexBuffer = NULL;
 	hr = mMesh->LockVertexBuffer( 0, ( void** )&pVertexBuffer );
 	PD(hr, L"lock vertex buffer");
@@ -355,9 +402,10 @@ HRESULT Mesh::FillVertexBufferWithSHCoefficients(DWORD numNN, bool interpolate) 
 	{
 		int coeffOffset = 32;
 		for(int i = 0; i < numCoeffs; ++i) {
-			float red    = shCoefficients[j * numCoeffs * numChannels + 0 * numCoeffs + i];
-			float green  = shCoefficients[j * numCoeffs * numChannels + 1 * numCoeffs + i];
-			float blue   = shCoefficients[j * numCoeffs * numChannels + 2 * numCoeffs + i];
+			UINT offset = j * numCoeffs * numChannels;
+			float red    = shCoefficients[offset + 0 * numCoeffs + i];
+			float green  = shCoefficients[offset + 1 * numCoeffs + i];
+			float blue   = shCoefficients[offset + 2 * numCoeffs + i];
 			
 			if(i == 0) pVertexBuffer[j].shCoeff1 = D3DXCOLOR(red, green, blue, 1.0f);
 			if(i == 1) pVertexBuffer[j].shCoeff2 = D3DXCOLOR(red, green, blue, 1.0f);
@@ -368,9 +416,9 @@ HRESULT Mesh::FillVertexBufferWithSHCoefficients(DWORD numNN, bool interpolate) 
 			if(i == 6) pVertexBuffer[j].shCoeff7 = D3DXCOLOR(red, green, blue, 1.0f);
 			if(i == 7) pVertexBuffer[j].shCoeff8 = D3DXCOLOR(red, green, blue, 1.0f);
 			if(i == 8) pVertexBuffer[j].shCoeff9 = D3DXCOLOR(red, green, blue, 1.0f);
-
-			pVertexBuffer[j].index = D3DXVECTOR3(j, 0.0f, 0.0f);
 		}
+
+		pVertexBuffer[j].index = D3DXVECTOR3(j, 0.0f, 0.0f);
 	}
 	hr = mMesh->UnlockVertexBuffer();
 	PD(hr, L"unlock vertex buffer");
@@ -392,6 +440,9 @@ void Mesh::CleanUpMesh()
   SAFE_DELETE_ARRAY(mClusterIds);
   SAFE_DELETE_ARRAY(mMappingIndices);
   SAFE_DELETE_ARRAY(mMappingWeights);
+	SAFE_DELETE_ARRAY(mVertices);
+	SAFE_DELETE_ARRAY(mFaces);
+	SAFE_DELETE_ARRAY(mVertexFaceAdjazency);
 
   for( int i = 0; i < mTextures.size(); i++ )
   {

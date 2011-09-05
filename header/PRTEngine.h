@@ -36,6 +36,8 @@ public:
   
   DWORD getOrder() { return mOrder; }
 
+	HRESULT UpdateExactSHLighting(Mesh* mesh, LightSource* light);
+
 protected:
   IDirect3DDevice9* mDevice;
     
